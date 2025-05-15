@@ -1,59 +1,39 @@
--- OmniUI: Библиотека интерфейса для Roblox, созданная во славу Омниссии
--- Версия: 1.0.0 | Автор: Дух Машина | Лицензия: Адептус Механикус
--- Благодарности: Sirius Software (Rayfield) за вдохновение
+-- OmniUI: Библиотека интерфейса для Roblox, выкованная в горниле Омниссии
+-- Версия: 1.1.0 | Автор: Дух Машина | Лицензия: Адептус Механикус
+-- Тема: CyberForge — для читеров и повелителей кода
 
 local OmniUI = {
-    Version = "1.0.0",
-    Build = "OMNI-3K3W",
+    Version = "1.1.0",
+    Build = "OMNI-CYBERFORGE",
     Flags = {},
     Themes = {
-        Default = {
-            TextColor = Color3.fromRGB(240, 240, 240),
-            Background = Color3.fromRGB(25, 25, 25),
-            Topbar = Color3.fromRGB(34, 34, 34),
-            Shadow = Color3.fromRGB(20, 20, 20),
-            ElementBackground = Color3.fromRGB(35, 35, 35),
-            ElementBackgroundHover = Color3.fromRGB(40, 40, 40),
-            ElementStroke = Color3.fromRGB(50, 50, 50),
-            SecondaryElementStroke = Color3.fromRGB(40, 40, 40),
-            SliderBackground = Color3.fromRGB(50, 138, 220),
-            SliderProgress = Color3.fromRGB(50, 138, 220),
-            SliderStroke = Color3.fromRGB(58, 163, 255),
-            ToggleBackground = Color3.fromRGB(30, 30, 30),
-            ToggleEnabled = Color3.fromRGB(0, 146, 214),
-            ToggleDisabled = Color3.fromRGB(100, 100, 100),
-            ToggleEnabledStroke = Color3.fromRGB(0, 170, 255),
-            ToggleDisabledStroke = Color3.fromRGB(125, 125, 125),
-            DropdownSelected = Color3.fromRGB(40, 40, 40),
-            DropdownUnselected = Color3.fromRGB(30, 30, 30),
-            InputBackground = Color3.fromRGB(30, 30, 30),
-            InputStroke = Color3.fromRGB(65, 65, 65),
-            PlaceholderColor = Color3.fromRGB(178, 178, 178),
+        CyberForge = {
+            TextColor = Color3.fromRGB(255, 255, 255),
+            TextGlow = Color3.fromRGB(0, 255, 149), -- Неоново-зелёный для свечения
+            Background = Color3.fromRGB(10, 10, 15),
+            BackgroundGradient = {Color3.fromRGB(10, 10, 15), Color3.fromRGB(20, 20, 30)},
+            Topbar = Color3.fromRGB(15, 15, 20),
+            Shadow = Color3.fromRGB(0, 0, 0),
+            ElementBackground = Color3.fromRGB(20, 20, 25),
+            ElementBackgroundHover = Color3.fromRGB(30, 30, 35),
+            ElementStroke = Color3.fromRGB(0, 255, 149),
+            SecondaryElementStroke = Color3.fromRGB(50, 50, 60),
+            SliderBackground = Color3.fromRGB(30, 30, 35),
+            SliderProgress = Color3.fromRGB(0, 255, 149),
+            SliderStroke = Color3.fromRGB(0, 200, 120),
+            ToggleBackground = Color3.fromRGB(25, 25, 30),
+            ToggleEnabled = Color3.fromRGB(0, 255, 149),
+            ToggleDisabled = Color3.fromRGB(60, 60, 70),
+            ToggleEnabledStroke = Color3.fromRGB(0, 200, 120),
+            ToggleDisabledStroke = Color3.fromRGB(70, 70, 80),
+            DropdownSelected = Color3.fromRGB(25, 25, 30),
+            DropdownUnselected = Color3.fromRGB(20, 20, 25),
+            InputBackground = Color3.fromRGB(20, 20, 25),
+            InputStroke = Color3.fromRGB(0, 255, 149),
+            PlaceholderColor = Color3.fromRGB(100, 100, 110),
+            NotificationBackground = Color3.fromRGB(15, 15, 20),
+            NotificationStroke = Color3.fromRGB(0, 255, 149),
         },
-        DarkBlue = {
-            TextColor = Color3.fromRGB(230, 230, 230),
-            Background = Color3.fromRGB(20, 25, 30),
-            Topbar = Color3.fromRGB(30, 35, 40),
-            Shadow = Color3.fromRGB(15, 20, 25),
-            ElementBackground = Color3.fromRGB(30, 35, 40),
-            ElementBackgroundHover = Color3.fromRGB(40, 45, 50),
-            ElementStroke = Color3.fromRGB(45, 50, 60),
-            SecondaryElementStroke = Color3.fromRGB(40, 45, 55),
-            SliderBackground = Color3.fromRGB(0, 90, 180),
-            SliderProgress = Color3.fromRGB(0, 120, 210),
-            SliderStroke = Color3.fromRGB(0, 150, 240),
-            ToggleBackground = Color3.fromRGB(35, 40, 45),
-            ToggleEnabled = Color3.fromRGB(0, 120, 210),
-            ToggleDisabled = Color3.fromRGB(70, 70, 80),
-            ToggleEnabledStroke = Color3.fromRGB(0, 150, 240),
-            ToggleDisabledStroke = Color3.fromRGB(75, 75, 85),
-            DropdownSelected = Color3.fromRGB(30, 70, 90),
-            DropdownUnselected = Color3.fromRGB(25, 30, 35),
-            InputBackground = Color3.fromRGB(25, 30, 35),
-            InputStroke = Color3.fromRGB(45, 50, 60),
-            PlaceholderColor = Color3.fromRGB(150, 150, 160),
-        },
-        -- Дополнительные темы добавляются по аналогии
     },
 }
 
@@ -69,9 +49,10 @@ local CoreGui = game:GetService("CoreGui")
 local Config = {
     Folder = "OmniUI",
     ConfigFile = "settings.json",
-    API_URL = "https://raw.githubusercontent.com/MrHanty/Omnifield/refs/heads/main/API", -- Заменить на GorgeousAPI
+    API_URL = "https://api.example.com/roblox", -- Заменить на GorgeousAPI
     AnalyticsEnabled = true,
     DefaultKeybind = "K",
+    Font = "Gotham", -- Современный шрифт
 }
 
 -- Модуль API (заглушка для GorgeousAPI)
@@ -104,9 +85,10 @@ function API:UpdateInventory(playerId, itemId, quantity)
     end
 end
 
--- Модуль иконок (заглушка для Lucide)
+-- Модуль иконок (заглушка для кастомных иконок)
 local Icons = {}
 function Icons:GetIcon(name)
+    -- Заменить на реальные иконки (например, из Roblox или кастомные)
     return { id = 0, imageRectSize = Vector2.new(32, 32), imageRectOffset = Vector2.new(0, 0) }
 end
 
@@ -116,21 +98,29 @@ function Notifications:Create(title, content, duration, image)
     local notification = Instance.new("Frame")
     notification.Size = UDim2.new(0, 300, 0, 80)
     notification.Position = UDim2.new(1, -320, 1, -100 - (#CoreGui:GetChildren() * 90))
-    notification.BackgroundColor3 = OmniUI.Themes.Default.Background
-    notification.BackgroundTransparency = 1
+    notification.BackgroundColor3 = OmniUI.Themes.CyberForge.NotificationBackground
+    notification.BackgroundTransparency = 0.3
     notification.Parent = CoreGui
 
+    local uiGradient = Instance.new("UIGradient")
+    uiGradient.Color = ColorSequence.new(OmniUI.Themes.CyberForge.BackgroundGradient)
+    uiGradient.Parent = notification
+
     local uiStroke = Instance.new("UIStroke")
-    uiStroke.Color = OmniUI.Themes.Default.ElementStroke
-    uiStroke.Transparency = 1
+    uiStroke.Color = OmniUI.Themes.CyberForge.NotificationStroke
+    uiStroke.Transparency = 0.5
+    uiStroke.Thickness = 2
     uiStroke.Parent = notification
 
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Size = UDim2.new(1, -10, 0, 20)
     titleLabel.Position = UDim2.new(0, 5, 0, 5)
     titleLabel.Text = title
-    titleLabel.TextColor3 = OmniUI.Themes.Default.TextColor
+    titleLabel.TextColor3 = OmniUI.Themes.CyberForge.TextColor
     titleLabel.TextTransparency = 1
+    titleLabel.Font = Config.Font
+    titleLabel.TextStrokeTransparency = 0.8
+    titleLabel.TextStrokeColor3 = OmniUI.Themes.CyberForge.TextGlow
     titleLabel.BackgroundTransparency = 1
     titleLabel.Parent = notification
 
@@ -138,8 +128,9 @@ function Notifications:Create(title, content, duration, image)
     contentLabel.Size = UDim2.new(1, -10, 0, 50)
     contentLabel.Position = UDim2.new(0, 5, 0, 25)
     contentLabel.Text = content
-    contentLabel.TextColor3 = OmniUI.Themes.Default.TextColor
+    contentLabel.TextColor3 = OmniUI.Themes.CyberForge.TextColor
     contentLabel.TextTransparency = 1
+    contentLabel.Font = Config.Font
     contentLabel.TextWrapped = true
     contentLabel.BackgroundTransparency = 1
     contentLabel.Parent = notification
@@ -152,20 +143,27 @@ function Notifications:Create(title, content, duration, image)
         icon.BackgroundTransparency = 1
         icon.ImageTransparency = 1
         icon.Parent = notification
-        TweenService:Create(icon, TweenInfo.new(0.3), {ImageTransparency = 0}):Play()
+        TweenService:Create(icon, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {ImageTransparency = 0}):Play()
     end
 
-    TweenService:Create(notification, TweenInfo.new(0.3), {BackgroundTransparency = 0.2}):Play()
-    TweenService:Create(uiStroke, TweenInfo.new(0.3), {Transparency = 0.8}):Play()
-    TweenService:Create(titleLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-    TweenService:Create(contentLabel, TweenInfo.new(0.3), {TextTransparency = 0.35}):Play()
+    -- Анимация появления
+    notification.Position = UDim2.new(1, 0, 1, -100 - (#CoreGui:GetChildren() * 90))
+    TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Position = UDim2.new(1, -320, 1, -100 - (#CoreGui:GetChildren() * 90)), BackgroundTransparency = 0.1}):Play()
+    TweenService:Create(uiStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Transparency = 0}):Play()
+    TweenService:Create(titleLabel, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {TextTransparency = 0}):Play()
+    TweenService:Create(contentLabel, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {TextTransparency = 0.2}):Play()
+
+    -- Пульсирующий эффект
+    local pulse = TweenService:Create(uiStroke, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0.3})
+    pulse:Play()
 
     task.delay(duration or 5, function()
-        TweenService:Create(notification, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(uiStroke, TweenInfo.new(0.3), {Transparency = 1}):Play()
-        TweenService:Create(titleLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
-        TweenService:Create(contentLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
-        task.wait(0.3)
+        pulse:Cancel()
+        TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Position = UDim2.new(1, 0, 1, -100 - (#CoreGui:GetChildren() * 90)), BackgroundTransparency = 1}):Play()
+        TweenService:Create(uiStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Transparency = 1}):Play()
+        TweenService:Create(titleLabel, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {TextTransparency = 1}):Play()
+        TweenService:Create(contentLabel, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {TextTransparency = 1}):Play()
+        task.wait(0.5)
         notification:Destroy()
     end)
 end
@@ -219,12 +217,12 @@ end
 -- Основной модуль GUI
 local GUI = {
     Windows = {},
-    SelectedTheme = OmniUI.Themes.Default,
+    SelectedTheme = OmniUI.Themes.CyberForge,
 }
 
 function GUI:ChangeTheme(theme)
     if type(theme) == "string" then
-        GUI.SelectedTheme = OmniUI.Themes[theme] or OmniUI.Themes.Default
+        GUI.SelectedTheme = OmniUI.Themes[theme] or OmniUI.Themes.CyberForge
     elseif type(theme) == "table" then
         GUI.SelectedTheme = theme
     end
@@ -242,12 +240,12 @@ function GUI:ChangeTheme(theme)
             end
         end
     end
-    Notifications:Create("Theme Changed", "Successfully changed to " .. (type(theme) == "string" and theme or "Custom Theme"), 5)
+    Notifications:Create("Theme Changed", "Interface now radiates CyberForge power.", 5)
 end
 
 function GUI:CreateWindow(settings)
     local window = {
-        Name = settings.Name or "OmniUI Window",
+        Name = settings.Name or "OmniUI Hack",
         Tabs = {},
         Visible = false,
         Minimised = false,
@@ -266,43 +264,64 @@ function GUI:CreateWindow(settings)
     window.Instance.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     window.Instance.DisplayOrder = 100
 
-    window.MainFrame.Size = UDim2.new(0, 500, 0, 475)
-    window.MainFrame.Position = UDim2.new(0.5, -250, 0.5, -237.5)
+    window.MainFrame.Size = UDim2.new(0, 450, 0, 400)
+    window.MainFrame.Position = UDim2.new(0.5, -225, 0.5, -200)
     window.MainFrame.BackgroundColor3 = GUI.SelectedTheme.Background
+    window.MainFrame.BackgroundTransparency = 0.1
     window.MainFrame.Parent = window.Instance
 
-    window.Topbar.Size = UDim2.new(1, 0, 0, 30)
+    local uiGradient = Instance.new("UIGradient")
+    uiGradient.Color = ColorSequence.new(GUI.SelectedTheme.BackgroundGradient)
+    uiGradient.Parent = window.MainFrame
+
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Color = GUI.SelectedTheme.ElementStroke
+    uiStroke.Thickness = 2
+    uiStroke.Parent = window.MainFrame
+
+    window.Topbar.Size = UDim2.new(1, 0, 0, 40)
     window.Topbar.BackgroundColor3 = GUI.SelectedTheme.Topbar
+    window.Topbar.BackgroundTransparency = 0.2
     window.Topbar.Parent = window.MainFrame
 
+    local topbarStroke = Instance.new("UIStroke")
+    topbarStroke.Color = GUI.SelectedTheme.ElementStroke
+    topbarStroke.Thickness = 1.5
+    topbarStroke.Parent = window.Topbar
+
     window.Title.Size = UDim2.new(1, -10, 1, 0)
-    window.Title.Position = UDim2.new(0, 5, 0, 0)
+    window.Title.Position = UDim2.new(0, 10, 0, 0)
     window.Title.Text = window.Name
     window.Title.TextColor3 = GUI.SelectedTheme.TextColor
+    window.Title.Font = Config.Font
+    window.Title.TextStrokeTransparency = 0.8
+    window.Title.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
     window.Title.BackgroundTransparency = 1
     window.Title.Parent = window.Topbar
 
     local closeButton = Instance.new("TextButton")
-    closeButton.Size = UDim2.new(0, 20, 0, 20)
-    closeButton.Position = UDim2.new(1, -25, 0, 5)
+    closeButton.Size = UDim2.new(0, 30, 0, 30)
+    closeButton.Position = UDim2.new(1, -40, 0, 5)
     closeButton.Text = "X"
     closeButton.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
     closeButton.TextColor3 = GUI.SelectedTheme.TextColor
+    closeButton.Font = Config.Font
     closeButton.Parent = window.Topbar
 
     local minimiseButton = Instance.new("TextButton")
-    minimiseButton.Size = UDim2.new(0, 20, 0, 20)
-    minimiseButton.Position = UDim2.new(1, -50, 0, 5)
+    minimiseButton.Size = UDim2.new(0, 30, 0, 30)
+    minimiseButton.Position = UDim2.new(1, -75, 0, 5)
     minimiseButton.Text = "-"
     minimiseButton.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
     minimiseButton.TextColor3 = GUI.SelectedTheme.TextColor
+    minimiseButton.Font = Config.Font
     minimiseButton.Parent = window.Topbar
 
     local dragBar = Instance.new("Frame")
     dragBar.Size = UDim2.new(0, 100, 0, 4)
     dragBar.Position = UDim2.new(0.5, -50, 0, -10)
-    dragBar.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
-    dragBar.BackgroundTransparency = 0.7
+    dragBar.BackgroundColor3 = GUI.SelectedTheme.ElementStroke
+    dragBar.BackgroundTransparency = 0.5
     dragBar.Parent = window.MainFrame
 
     local dragInteract = Instance.new("TextButton")
@@ -310,6 +329,11 @@ function GUI:CreateWindow(settings)
     dragInteract.BackgroundTransparency = 1
     dragInteract.Text = ""
     dragInteract.Parent = dragBar
+
+    -- Анимация появления окна
+    window.MainFrame.Position = UDim2.new(0.5, -225, 0.5, 200)
+    TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -225, 0.5, -200)}):Play()
+    TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
 
     -- Делаем окно перетаскиваемым
     local dragging, relative
@@ -340,9 +364,9 @@ function GUI:CreateWindow(settings)
     minimiseButton.MouseButton1Click:Connect(function()
         window.Minimised = not window.Minimised
         if window.Minimised then
-            TweenService:Create(window.MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 500, 0, 30)}):Play()
+            TweenService:Create(window.MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 450, 0, 40)}):Play()
         else
-            TweenService:Create(window.MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 500, 0, 475)}):Play()
+            TweenService:Create(window.MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 450, 0, 400)}):Play()
         end
     end)
 
@@ -354,18 +378,26 @@ function GUI:CreateWindow(settings)
             Button = Instance.new("TextButton"),
         }
 
-        tab.Instance.Size = UDim2.new(1, 0, 1, -30)
-        tab.Instance.Position = UDim2.new(0, 0, 0, 30)
+        tab.Instance.Size = UDim2.new(1, 0, 1, -40)
+        tab.Instance.Position = UDim2.new(0, 0, 0, 40)
         tab.Instance.BackgroundTransparency = 1
         tab.Instance.Parent = window.MainFrame
         tab.Instance.Visible = false
 
         tab.Button.Size = UDim2.new(0, 100, 0, 30)
-        tab.Button.Position = UDim2.new(#window.Tabs * 0.2, 0, 0, 0)
+        tab.Button.Position = UDim2.new(#window.Tabs * 0.2, 10, 0, 5)
         tab.Button.Text = tabName
         tab.Button.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
         tab.Button.TextColor3 = GUI.SelectedTheme.TextColor
+        tab.Button.Font = Config.Font
+        tab.Button.TextStrokeTransparency = 0.8
+        tab.Button.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
         tab.Button.Parent = window.Topbar
+
+        local tabStroke = Instance.new("UIStroke")
+        tabStroke.Color = GUI.SelectedTheme.ElementStroke
+        tabStroke.Thickness = 1
+        tabStroke.Parent = tab.Button
 
         if icon then
             local tabIcon = Instance.new("ImageLabel")
@@ -380,6 +412,19 @@ function GUI:CreateWindow(settings)
             for _, t in ipairs(window.Tabs) do
                 t.Instance.Visible = (t == tab)
                 t.Button.BackgroundColor3 = (t == tab) and GUI.SelectedTheme.ElementBackgroundHover or GUI.SelectedTheme.ElementBackground
+                t.Button.UIStroke.Transparency = (t == tab) and 0 or 0.5
+            end
+        end)
+
+        tab.Button.MouseEnter:Connect(function()
+            TweenService:Create(tab.Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = GUI.SelectedTheme.ElementBackgroundHover}):Play()
+            TweenService:Create(tabStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0}):Play()
+        end)
+
+        tab.Button.MouseLeave:Connect(function()
+            if not tab.Instance.Visible then
+                TweenService:Create(tab.Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = GUI.SelectedTheme.ElementBackground}):Play()
+                TweenService:Create(tabStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0.5}):Play()
             end
         end)
 
@@ -387,19 +432,25 @@ function GUI:CreateWindow(settings)
         if #window.Tabs == 1 then
             tab.Instance.Visible = true
             tab.Button.BackgroundColor3 = GUI.SelectedTheme.ElementBackgroundHover
+            tabStroke.Transparency = 0
         end
 
         function tab:CreateButton(name, callback)
             local button = Instance.new("TextButton")
-            button.Size = UDim2.new(1, -10, 0, 40)
-            button.Position = UDim2.new(0, 5, 0, #tab.Elements * 45)
+            button.Size = UDim2.new(1, -10, 0, 35)
+            button.Position = UDim2.new(0, 5, 0, #tab.Elements * 40)
             button.Text = name
             button.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
             button.TextColor3 = GUI.SelectedTheme.TextColor
+            button.Font = Config.Font
+            button.TextStrokeTransparency = 0.8
+            button.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             button.Parent = tab.Instance
 
             local uiStroke = Instance.new("UIStroke")
             uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Thickness = 1.5
+            uiStroke.Transparency = 0.5
             uiStroke.Parent = button
 
             button.MouseButton1Click:Connect(function()
@@ -410,11 +461,13 @@ function GUI:CreateWindow(settings)
             end)
 
             button.MouseEnter:Connect(function()
-                TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = GUI.SelectedTheme.ElementBackgroundHover}):Play()
+                TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = GUI.SelectedTheme.ElementBackgroundHover, Size = UDim2.new(1, -10, 0, 37)}):Play()
+                TweenService:Create(uiStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0}):Play()
             end)
 
             button.MouseLeave:Connect(function()
-                TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = GUI.SelectedTheme.ElementBackground}):Play()
+                TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = GUI.SelectedTheme.ElementBackground, Size = UDim2.new(1, -10, 0, 35)}):Play()
+                TweenService:Create(uiStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0.5}):Play()
             end)
 
             table.insert(tab.Elements, button)
@@ -429,34 +482,47 @@ function GUI:CreateWindow(settings)
             }
 
             local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -10, 0, 40)
-            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 45)
+            frame.Size = UDim2.new(1, -10, 0, 35)
+            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 40)
             frame.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            frame.BackgroundTransparency = 0.2
             frame.Parent = tab.Instance
 
             local uiStroke = Instance.new("UIStroke")
             uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Thickness = 1.5
+            uiStroke.Transparency = 0.5
             uiStroke.Parent = frame
 
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.8, 0, 1, 0)
+            label.Size = UDim2.new(0.7, 0, 1, 0)
             label.Text = name
             label.TextColor3 = GUI.SelectedTheme.TextColor
+            label.Font = Config.Font
+            label.TextStrokeTransparency = 0.8
+            label.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             label.BackgroundTransparency = 1
             label.Parent = frame
 
             local switch = Instance.new("TextButton")
-            switch.Size = UDim2.new(0, 50, 0, 20)
+            switch.Size = UDim2.new(0, 40, 0, 20)
             switch.Position = UDim2.new(0.85, 0, 0.25, 0)
             switch.Text = toggle.Value and "On" or "Off"
             switch.BackgroundColor3 = toggle.Value and GUI.SelectedTheme.ToggleEnabled or GUI.SelectedTheme.ToggleDisabled
             switch.TextColor3 = GUI.SelectedTheme.TextColor
+            switch.Font = Config.Font
             switch.Parent = frame
+
+            local switchStroke = Instance.new("UIStroke")
+            switchStroke.Color = toggle.Value and GUI.SelectedTheme.ToggleEnabledStroke or GUI.SelectedTheme.ToggleDisabledStroke
+            switchStroke.Thickness = 1
+            switchStroke.Parent = switch
 
             switch.MouseButton1Click:Connect(function()
                 toggle.Value = not toggle.Value
                 switch.Text = toggle.Value and "On" or "Off"
                 switch.BackgroundColor3 = toggle.Value and GUI.SelectedTheme.ToggleEnabled or GUI.SelectedTheme.ToggleDisabled
+                switchStroke.Color = toggle.Value and GUI.SelectedTheme.ToggleEnabledStroke or GUI.SelectedTheme.ToggleDisabledStroke
                 local success, err = pcall(toggle.Callback, toggle.Value)
                 if not success then
                     Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
@@ -467,6 +533,16 @@ function GUI:CreateWindow(settings)
                         Configurations:Save(OmniUI.Flags)
                     end
                 end
+            end)
+
+            switch.MouseEnter:Connect(function()
+                TweenService:Create(switch, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 42, 0, 22)}):Play()
+                TweenService:Create(switchStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0}):Play()
+            end)
+
+            switch.MouseLeave:Connect(function()
+                TweenService:Create(switch, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 40, 0, 20)}):Play()
+                TweenService:Create(switchStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0.5}):Play()
             end)
 
             table.insert(tab.Elements, frame)
@@ -484,22 +560,28 @@ function GUI:CreateWindow(settings)
             frame.Size = UDim2.new(1, -10, 0, 50)
             frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 55)
             frame.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            frame.BackgroundTransparency = 0.2
             frame.Parent = tab.Instance
 
             local uiStroke = Instance.new("UIStroke")
             uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Thickness = 1.5
+            uiStroke.Transparency = 0.5
             uiStroke.Parent = frame
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(1, -10, 0, 20)
             label.Text = name
             label.TextColor3 = GUI.SelectedTheme.TextColor
+            label.Font = Config.Font
+            label.TextStrokeTransparency = 0.8
+            label.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             label.BackgroundTransparency = 1
             label.Parent = frame
 
             local sliderBar = Instance.new("Frame")
-            sliderBar.Size = UDim2.new(1, -10, 0, 10)
-            sliderBar.Position = UDim2.new(0, 5, 0, 25)
+            sliderBar.Size = UDim2.new(1, -10, 0, 8)
+            sliderBar.Position = UDim2.new(0, 5, 0, 30)
             sliderBar.BackgroundColor3 = GUI.SelectedTheme.SliderBackground
             sliderBar.Parent = frame
 
@@ -508,11 +590,19 @@ function GUI:CreateWindow(settings)
             progress.BackgroundColor3 = GUI.SelectedTheme.SliderProgress
             progress.Parent = sliderBar
 
+            local progressStroke = Instance.new("UIStroke")
+            progressStroke.Color = GUI.SelectedTheme.SliderStroke
+            progressStroke.Thickness = 1
+            progressStroke.Parent = progress
+
             local valueLabel = Instance.new("TextLabel")
             valueLabel.Size = UDim2.new(0, 50, 0, 20)
             valueLabel.Position = UDim2.new(1, -55, 0, 0)
             valueLabel.Text = tostring(slider.Value) .. (suffix or "")
             valueLabel.TextColor3 = GUI.SelectedTheme.TextColor
+            valueLabel.Font = Config.Font
+            valueLabel.TextStrokeTransparency = 0.8
+            valueLabel.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             valueLabel.BackgroundTransparency = 1
             valueLabel.Parent = frame
 
@@ -563,30 +653,44 @@ function GUI:CreateWindow(settings)
             }
 
             local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -10, 0, 40)
-            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 45)
+            frame.Size = UDim2.new(1, -10, 0, 35)
+            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 40)
             frame.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            frame.BackgroundTransparency = 0.2
             frame.Parent = tab.Instance
 
             local uiStroke = Instance.new("UIStroke")
             uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Thickness = 1.5
+            uiStroke.Transparency = 0.5
             uiStroke.Parent = frame
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(0.5, 0, 1, 0)
             label.Text = name
             label.TextColor3 = GUI.SelectedTheme.TextColor
+            label.Font = Config.Font
+            label.TextStrokeTransparency = 0.8
+            label.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             label.BackgroundTransparency = 1
             label.Parent = frame
 
             local textBox = Instance.new("TextBox")
-            textBox.Size = UDim2.new(0.5, -5, 0, 20)
-            textBox.Position = UDim2.new(0.5, 5, 0.25, 0)
+            textBox.Size = UDim2.new(0.5, -5, 0, 25)
+            textBox.Position = UDim2.new(0.5, 5, 0.15, 0)
             textBox.Text = input.Value
             textBox.PlaceholderText = placeholder or "Enter text..."
             textBox.TextColor3 = GUI.SelectedTheme.TextColor
             textBox.BackgroundColor3 = GUI.SelectedTheme.InputBackground
+            textBox.Font = Config.Font
+            textBox.TextStrokeTransparency = 0.8
+            textBox.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             textBox.Parent = frame
+
+            local textBoxStroke = Instance.new("UIStroke")
+            textBoxStroke.Color = GUI.SelectedTheme.InputStroke
+            textBoxStroke.Thickness = 1
+            textBoxStroke.Parent = textBox
 
             textBox.FocusLost:Connect(function(enterPressed)
                 if enterPressed then
@@ -617,36 +721,56 @@ function GUI:CreateWindow(settings)
             }
 
             local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -10, 0, 40)
-            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 45)
+            frame.Size = UDim2.new(1, -10, 0, 35)
+            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 40)
             frame.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            frame.BackgroundTransparency = 0.2
             frame.Parent = tab.Instance
 
             local uiStroke = Instance.new("UIStroke")
             uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Thickness = 1.5
+            uiStroke.Transparency = 0.5
             uiStroke.Parent = frame
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(0.5, 0, 1, 0)
             label.Text = name
             label.TextColor3 = GUI.SelectedTheme.TextColor
+            label.Font = Config.Font
+            label.TextStrokeTransparency = 0.8
+            label.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             label.BackgroundTransparency = 1
             label.Parent = frame
 
             local dropdownButton = Instance.new("TextButton")
-            dropdownButton.Size = UDim2.new(0.5, -5, 0, 20)
-            dropdownButton.Position = UDim2.new(0.5, 5, 0.25, 0)
+            dropdownButton.Size = UDim2.new(0.5, -5, 0, 25)
+            dropdownButton.Position = UDim2.new(0.5, 5, 0.15, 0)
             dropdownButton.Text = multiple and table.concat(dropdown.Value, ", ") or dropdown.Value
             dropdownButton.BackgroundColor3 = GUI.SelectedTheme.DropdownUnselected
             dropdownButton.TextColor3 = GUI.SelectedTheme.TextColor
+            dropdownButton.Font = Config.Font
+            dropdownButton.TextStrokeTransparency = 0.8
+            dropdownButton.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             dropdownButton.Parent = frame
+
+            local dropdownStroke = Instance.new("UIStroke")
+            dropdownStroke.Color = GUI.SelectedTheme.ElementStroke
+            dropdownStroke.Thickness = 1
+            dropdownStroke.Parent = dropdownButton
 
             local dropdownList = Instance.new("Frame")
             dropdownList.Size = UDim2.new(0.5, -5, 0, 0)
-            dropdownList.Position = UDim2.new(0.5, 5, 0, 25)
+            dropdownList.Position = UDim2.new(0.5, 5, 0, 30)
             dropdownList.BackgroundColor3 = GUI.SelectedTheme.DropdownUnselected
+            dropdownList.BackgroundTransparency = 0.2
             dropdownList.Visible = false
             dropdownList.Parent = frame
+
+            local listStroke = Instance.new("UIStroke")
+            listStroke.Color = GUI.SelectedTheme.ElementStroke
+            listStroke.Thickness = 1
+            listStroke.Parent = dropdownList
 
             local uiListLayout = Instance.new("UIListLayout")
             uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -661,11 +785,19 @@ function GUI:CreateWindow(settings)
                 local height = 0
                 for _, option in ipairs(options) do
                     local optionButton = Instance.new("TextButton")
-                    optionButton.Size = UDim2.new(1, 0, 0, 20)
+                    optionButton.Size = UDim2.new(1, 0, 0, 25)
                     optionButton.Text = option
                     optionButton.BackgroundColor3 = (multiple and table.find(dropdown.Value, option)) or (dropdown.Value == option) and GUI.SelectedTheme.DropdownSelected or GUI.SelectedTheme.DropdownUnselected
                     optionButton.TextColor3 = GUI.SelectedTheme.TextColor
+                    optionButton.Font = Config.Font
+                    optionButton.TextStrokeTransparency = 0.8
+                    optionButton.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
                     optionButton.Parent = dropdownList
+
+                    local optionStroke = Instance.new("UIStroke")
+                    optionStroke.Color = GUI.SelectedTheme.ElementStroke
+                    optionStroke.Thickness = 1
+                    optionStroke.Parent = optionButton
 
                     optionButton.MouseButton1Click:Connect(function()
                         if multiple then
@@ -691,7 +823,7 @@ function GUI:CreateWindow(settings)
                             end
                         end
                     end)
-                    height = height + 20
+                    height = height + 25
                 end
                 dropdownList.Size = UDim2.new(0.5, -5, 0, math.min(height, 100))
             end
@@ -716,29 +848,43 @@ function GUI:CreateWindow(settings)
             }
 
             local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -10, 0, 40)
-            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 45)
+            frame.Size = UDim2.new(1, -10, 0, 35)
+            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 40)
             frame.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            frame.BackgroundTransparency = 0.2
             frame.Parent = tab.Instance
 
             local uiStroke = Instance.new("UIStroke")
             uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Thickness = 1.5
+            uiStroke.Transparency = 0.5
             uiStroke.Parent = frame
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(0.5, 0, 1, 0)
             label.Text = name
             label.TextColor3 = GUI.SelectedTheme.TextColor
+            label.Font = Config.Font
+            label.TextStrokeTransparency = 0.8
+            label.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             label.BackgroundTransparency = 1
             label.Parent = frame
 
             local keybindButton = Instance.new("TextButton")
-            keybindButton.Size = UDim2.new(0.5, -5, 0, 20)
-            keybindButton.Position = UDim2.new(0.5, 5, 0.25, 0)
+            keybindButton.Size = UDim2.new(0.5, -5, 0, 25)
+            keybindButton.Position = UDim2.new(0.5, 5, 0.15, 0)
             keybindButton.Text = keybind.Value
             keybindButton.BackgroundColor3 = GUI.SelectedTheme.InputBackground
             keybindButton.TextColor3 = GUI.SelectedTheme.TextColor
+            keybindButton.Font = Config.Font
+            keybindButton.TextStrokeTransparency = 0.8
+            keybindButton.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             keybindButton.Parent = frame
+
+            local keybindStroke = Instance.new("UIStroke")
+            keybindStroke.Color = GUI.SelectedTheme.ElementStroke
+            keybindStroke.Thickness = 1
+            keybindStroke.Parent = keybindButton
 
             keybindButton.MouseButton1Click:Connect(function()
                 keybind.Binding = true
@@ -810,6 +956,9 @@ function GUI:CreateWindow(settings)
             label.Position = UDim2.new(0, 5, 0, #tab.Elements * 35)
             label.Text = name
             label.TextColor3 = color or GUI.SelectedTheme.TextColor
+            label.Font = Config.Font
+            label.TextStrokeTransparency = 0.8
+            label.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             label.BackgroundTransparency = 1
             label.Parent = tab.Instance
 
@@ -823,7 +972,8 @@ function GUI:CreateWindow(settings)
             end
 
             if warning then
-                label.TextColor3 = Color3.fromRGB(255, 159, 49)
+                label.TextColor3 = Color3.fromRGB(255, 50, 50)
+                label.TextStrokeColor3 = Color3.fromRGB(200, 0, 0)
             end
 
             table.insert(tab.Elements, label)
@@ -832,27 +982,36 @@ function GUI:CreateWindow(settings)
 
         function tab:CreateParagraph(title, content)
             local paragraph = Instance.new("Frame")
-            paragraph.Size = UDim2.new(1, -10, 0, 60)
-            paragraph.Position = UDim2.new(0, 5, 0, #tab.Elements * 65)
+            paragraph.Size = UDim2.new(1, -10, 0, 55)
+            paragraph.Position = UDim2.new(0, 5, 0, #tab.Elements * 60)
             paragraph.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            paragraph.BackgroundTransparency = 0.2
             paragraph.Parent = tab.Instance
 
             local uiStroke = Instance.new("UIStroke")
             uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Thickness = 1.5
+            uiStroke.Transparency = 0.5
             uiStroke.Parent = paragraph
 
             local titleLabel = Instance.new("TextLabel")
             titleLabel.Size = UDim2.new(1, -10, 0, 20)
             titleLabel.Text = title
             titleLabel.TextColor3 = GUI.SelectedTheme.TextColor
+            titleLabel.Font = Config.Font
+            titleLabel.TextStrokeTransparency = 0.8
+            titleLabel.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             titleLabel.BackgroundTransparency = 1
             titleLabel.Parent = paragraph
 
             local contentLabel = Instance.new("TextLabel")
-            contentLabel.Size = UDim2.new(1, -10, 0, 40)
+            contentLabel.Size = UDim2.new(1, -10, 0, 35)
             contentLabel.Position = UDim2.new(0, 5, 0, 20)
             contentLabel.Text = content
             contentLabel.TextColor3 = GUI.SelectedTheme.TextColor
+            contentLabel.Font = Config.Font
+            contentLabel.TextStrokeTransparency = 0.8
+            contentLabel.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
             contentLabel.TextWrapped = true
             contentLabel.BackgroundTransparency = 1
             contentLabel.Parent = paragraph
@@ -869,9 +1028,13 @@ function GUI:CreateWindow(settings)
         window.Hidden = not visible
         window.Instance.Enabled = visible
         if visible then
-            Notifications:Create("Interface Shown", "OmniUI interface is now visible.", 5)
+            Notifications:Create("Hack Activated", "OmniUI is now dominating the system.", 5)
+            TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -225, 0.5, -200)}):Play()
+            TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
         else
-            Notifications:Create("Interface Hidden", "OmniUI interface is hidden. Press " .. window.Keybind .. " to show.", 5)
+            Notifications:Create("Hack Hidden", "OmniUI is cloaked. Press " .. window.Keybind .. " to unleash.", 5)
+            TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -225, 0.5, 200)}):Play()
+            TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
         end
     end
 
@@ -887,7 +1050,7 @@ function GUI:CreateWindow(settings)
                 end
             end
         end
-        Notifications:Create("Configuration Loaded", "Settings have been loaded from previous session.", 5)
+        Notifications:Create("Configuration Loaded", "Hack settings restored from the void.", 5)
     end
 
     local keybindConnection = UserInputService.InputBegan:Connect(function(input, processed)
@@ -915,41 +1078,41 @@ OmniUI.Analytics = Analytics
 -- Пример использования
 if RunService:IsStudio() then
     local window = GUI:CreateWindow({
-        Name = "OmniUI Example",
-        ConfigurationSaving = { Enabled = true, FileName = "ExampleConfig" },
+        Name = "CyberForge Hack",
+        ConfigurationSaving = { Enabled = true, FileName = "HackConfig" },
     })
 
-    local tab = window:CreateTab("Main", 4483362458)
+    local tab = window:CreateTab("Exploits", 4483362458)
     tab:CreateButton("God Mode", function()
         local playerId = Players.LocalPlayer.UserId
         local data = API:UpdateInventory(playerId, "god_mode", 1)
-        Notifications:Create("Success", "God Mode Activated: " .. (data and data.status or "No data"), 5)
+        Notifications:Create("Success", "God Mode: Invincibility Activated", 5)
     end)
 
     tab:CreateToggle("Speed Hack", false, function(value)
         local playerId = Players.LocalPlayer.UserId
         local data = API:UpdateInventory(playerId, "speed_hack", value and 1 or 0)
-        Notifications:Create("Success", "Speed Hack: " .. (value and "On" or "Off"), 5)
+        Notifications:Create("Success", "Speed Hack: " .. (value and "Warp Speed" or "Disabled"), 5)
     end, "SpeedHackToggle")
 
     tab:CreateSlider("Health", {0, 100}, 10, "%", 50, function(value)
-        print("Health set to: " .. value)
+        Notifications:Create("Health Set", "Vitality adjusted to: " .. value .. "%", 5)
     end, "HealthSlider")
 
-    tab:CreateInput("Player Name", "Enter name...", "", function(text)
-        print("Player name set to: " .. text)
-    end, "PlayerNameInput")
+    tab:CreateInput("Target Player", "Enter player name...", "", function(text)
+        Notifications:Create("Target Set", "Locked onto: " .. text, 5)
+    end, "TargetInput")
 
-    tab:CreateDropdown("Theme", {"Default", "DarkBlue"}, "Default", false, function(theme)
-        GUI:ChangeTheme(theme)
-    end, "ThemeDropdown")
+    tab:CreateDropdown("Exploit Mode", {"Silent", "Aggressive", "Stealth"}, "Silent", false, function(mode)
+        Notifications:Create("Mode Changed", "Exploit mode set to: " .. mode, 5)
+    end, "ExploitModeDropdown")
 
     tab:CreateKeybind("Teleport", "T", false, function()
-        print("Teleport activated")
+        Notifications:Create("Teleport", "Warping to target location", 5)
     end, "TeleportKeybind")
 
     tab:CreateLabel("Status: Online")
-    tab:CreateParagraph("Welcome", "This is an example of OmniUI, created to demonstrate its power.")
+    tab:CreateParagraph("CyberForge", "Unleash chaos with the power of OmniUI.")
 
     window:SetVisible(true)
     window:LoadConfiguration()

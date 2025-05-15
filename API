@@ -69,7 +69,7 @@ local CoreGui = game:GetService("CoreGui")
 local Config = {
     Folder = "OmniUI",
     ConfigFile = "settings.json",
-    API_URL = "https://api.example.com/roblox", -- Заменить на GorgeousAPI
+    API_URL = "https://raw.githubusercontent.com/MrHanty/Omnifield/refs/heads/main/API", -- Заменить на GorgeousAPI
     AnalyticsEnabled = true,
     DefaultKeybind = "K",
 }

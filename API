@@ -1,0 +1,958 @@
+-- OmniUI: Библиотека интерфейса для Roblox, созданная во славу Омниссии
+-- Версия: 1.0.0 | Автор: Дух Машина | Лицензия: Адептус Механикус
+-- Благодарности: Sirius Software (Rayfield) за вдохновение
+
+local OmniUI = {
+    Version = "1.0.0",
+    Build = "OMNI-3K3W",
+    Flags = {},
+    Themes = {
+        Default = {
+            TextColor = Color3.fromRGB(240, 240, 240),
+            Background = Color3.fromRGB(25, 25, 25),
+            Topbar = Color3.fromRGB(34, 34, 34),
+            Shadow = Color3.fromRGB(20, 20, 20),
+            ElementBackground = Color3.fromRGB(35, 35, 35),
+            ElementBackgroundHover = Color3.fromRGB(40, 40, 40),
+            ElementStroke = Color3.fromRGB(50, 50, 50),
+            SecondaryElementStroke = Color3.fromRGB(40, 40, 40),
+            SliderBackground = Color3.fromRGB(50, 138, 220),
+            SliderProgress = Color3.fromRGB(50, 138, 220),
+            SliderStroke = Color3.fromRGB(58, 163, 255),
+            ToggleBackground = Color3.fromRGB(30, 30, 30),
+            ToggleEnabled = Color3.fromRGB(0, 146, 214),
+            ToggleDisabled = Color3.fromRGB(100, 100, 100),
+            ToggleEnabledStroke = Color3.fromRGB(0, 170, 255),
+            ToggleDisabledStroke = Color3.fromRGB(125, 125, 125),
+            DropdownSelected = Color3.fromRGB(40, 40, 40),
+            DropdownUnselected = Color3.fromRGB(30, 30, 30),
+            InputBackground = Color3.fromRGB(30, 30, 30),
+            InputStroke = Color3.fromRGB(65, 65, 65),
+            PlaceholderColor = Color3.fromRGB(178, 178, 178),
+        },
+        DarkBlue = {
+            TextColor = Color3.fromRGB(230, 230, 230),
+            Background = Color3.fromRGB(20, 25, 30),
+            Topbar = Color3.fromRGB(30, 35, 40),
+            Shadow = Color3.fromRGB(15, 20, 25),
+            ElementBackground = Color3.fromRGB(30, 35, 40),
+            ElementBackgroundHover = Color3.fromRGB(40, 45, 50),
+            ElementStroke = Color3.fromRGB(45, 50, 60),
+            SecondaryElementStroke = Color3.fromRGB(40, 45, 55),
+            SliderBackground = Color3.fromRGB(0, 90, 180),
+            SliderProgress = Color3.fromRGB(0, 120, 210),
+            SliderStroke = Color3.fromRGB(0, 150, 240),
+            ToggleBackground = Color3.fromRGB(35, 40, 45),
+            ToggleEnabled = Color3.fromRGB(0, 120, 210),
+            ToggleDisabled = Color3.fromRGB(70, 70, 80),
+            ToggleEnabledStroke = Color3.fromRGB(0, 150, 240),
+            ToggleDisabledStroke = Color3.fromRGB(75, 75, 85),
+            DropdownSelected = Color3.fromRGB(30, 70, 90),
+            DropdownUnselected = Color3.fromRGB(25, 30, 35),
+            InputBackground = Color3.fromRGB(25, 30, 35),
+            InputStroke = Color3.fromRGB(45, 50, 60),
+            PlaceholderColor = Color3.fromRGB(150, 150, 160),
+        },
+        -- Дополнительные темы добавляются по аналогии
+    },
+}
+
+-- Сервисы
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+
+-- Конфигурация
+local Config = {
+    Folder = "OmniUI",
+    ConfigFile = "settings.json",
+    API_URL = "https://api.example.com/roblox", -- Заменить на GorgeousAPI
+    AnalyticsEnabled = true,
+    DefaultKeybind = "K",
+}
+
+-- Модуль API (заглушка для GorgeousAPI)
+local API = {}
+function API:GetPlayerData(playerId)
+    local success, response = pcall(function()
+        return HttpService:GetAsync(Config.API_URL .. "/player/" .. tostring(playerId))
+    end)
+    if success then
+        return HttpService:JSONDecode(response)
+    else
+        warn("API Error: " .. tostring(response))
+        return nil
+    end
+end
+
+function API:UpdateInventory(playerId, itemId, quantity)
+    local success, response = pcall(function()
+        return HttpService:PostAsync(
+            Config.API_URL .. "/inventory/update",
+            HttpService:JSONEncode({ playerId = playerId, itemId = itemId, quantity = quantity }),
+            Enum.HttpContentType.ApplicationJson
+        )
+    end)
+    if success then
+        return HttpService:JSONDecode(response)
+    else
+        warn("API Error: " .. tostring(response))
+        return nil
+    end
+end
+
+-- Модуль иконок (заглушка для Lucide)
+local Icons = {}
+function Icons:GetIcon(name)
+    return { id = 0, imageRectSize = Vector2.new(32, 32), imageRectOffset = Vector2.new(0, 0) }
+end
+
+-- Модуль уведомлений
+local Notifications = {}
+function Notifications:Create(title, content, duration, image)
+    local notification = Instance.new("Frame")
+    notification.Size = UDim2.new(0, 300, 0, 80)
+    notification.Position = UDim2.new(1, -320, 1, -100 - (#CoreGui:GetChildren() * 90))
+    notification.BackgroundColor3 = OmniUI.Themes.Default.Background
+    notification.BackgroundTransparency = 1
+    notification.Parent = CoreGui
+
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Color = OmniUI.Themes.Default.ElementStroke
+    uiStroke.Transparency = 1
+    uiStroke.Parent = notification
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -10, 0, 20)
+    titleLabel.Position = UDim2.new(0, 5, 0, 5)
+    titleLabel.Text = title
+    titleLabel.TextColor3 = OmniUI.Themes.Default.TextColor
+    titleLabel.TextTransparency = 1
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Parent = notification
+
+    local contentLabel = Instance.new("TextLabel")
+    contentLabel.Size = UDim2.new(1, -10, 0, 50)
+    contentLabel.Position = UDim2.new(0, 5, 0, 25)
+    contentLabel.Text = content
+    contentLabel.TextColor3 = OmniUI.Themes.Default.TextColor
+    contentLabel.TextTransparency = 1
+    contentLabel.TextWrapped = true
+    contentLabel.BackgroundTransparency = 1
+    contentLabel.Parent = notification
+
+    if image then
+        local icon = Instance.new("ImageLabel")
+        icon.Size = UDim2.new(0, 32, 0, 32)
+        icon.Position = UDim2.new(0, 5, 0, 5)
+        icon.Image = "rbxassetid://" .. (image or 0)
+        icon.BackgroundTransparency = 1
+        icon.ImageTransparency = 1
+        icon.Parent = notification
+        TweenService:Create(icon, TweenInfo.new(0.3), {ImageTransparency = 0}):Play()
+    end
+
+    TweenService:Create(notification, TweenInfo.new(0.3), {BackgroundTransparency = 0.2}):Play()
+    TweenService:Create(uiStroke, TweenInfo.new(0.3), {Transparency = 0.8}):Play()
+    TweenService:Create(titleLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+    TweenService:Create(contentLabel, TweenInfo.new(0.3), {TextTransparency = 0.35}):Play()
+
+    task.delay(duration or 5, function()
+        TweenService:Create(notification, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(uiStroke, TweenInfo.new(0.3), {Transparency = 1}):Play()
+        TweenService:Create(titleLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+        TweenService:Create(contentLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+        task.wait(0.3)
+        notification:Destroy()
+    end)
+end
+
+-- Модуль конфигураций
+local Configurations = {}
+function Configurations:Save(data)
+    if not isfolder or not writefile then
+        Notifications:Create("Error", "Filesystem not supported by your executor.", 5)
+        return
+    end
+    if not isfolder(Config.Folder) then
+        makefolder(Config.Folder)
+    end
+    writefile(Config.Folder .. "/" .. Config.ConfigFile, HttpService:JSONEncode(data))
+end
+
+function Configurations:Load()
+    if not isfile or not isfolder(Config.Folder) or not isfile(Config.Folder .. "/" .. Config.ConfigFile) then
+        return {}
+    end
+    local success, data = pcall(function()
+        return HttpService:JSONDecode(readfile(Config.Folder .. "/" .. Config.ConfigFile))
+    end)
+    if success then
+        return data
+    else
+        Notifications:Create("Error", "Failed to decode configuration file.", 5)
+        return {}
+    end
+end
+
+-- Модуль аналитики
+local Analytics = {}
+function Analytics:SendReport()
+    if not Config.AnalyticsEnabled then return end
+    task.spawn(function()
+        local success, response = pcall(function()
+            return HttpService:PostAsync(
+                "https://analytics.example.com/report",
+                HttpService:JSONEncode({ build = OmniUI.Build, version = OmniUI.Version }),
+                Enum.HttpContentType.ApplicationJson
+            )
+        end)
+        if not success then
+            warn("Analytics Error: " .. tostring(response))
+        end
+    end)
+end
+
+-- Основной модуль GUI
+local GUI = {
+    Windows = {},
+    SelectedTheme = OmniUI.Themes.Default,
+}
+
+function GUI:ChangeTheme(theme)
+    if type(theme) == "string" then
+        GUI.SelectedTheme = OmniUI.Themes[theme] or OmniUI.Themes.Default
+    elseif type(theme) == "table" then
+        GUI.SelectedTheme = theme
+    end
+    for _, window in pairs(GUI.Windows) do
+        window.MainFrame.BackgroundColor3 = GUI.SelectedTheme.Background
+        window.Topbar.BackgroundColor3 = GUI.SelectedTheme.Topbar
+        window.Title.TextColor3 = GUI.SelectedTheme.TextColor
+        for _, tab in ipairs(window.Tabs) do
+            tab.Instance.BackgroundColor3 = GUI.SelectedTheme.Background
+            for _, element in ipairs(tab.Elements) do
+                if element:IsA("Frame") then
+                    element.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+                    element.UIStroke.Color = GUI.SelectedTheme.ElementStroke
+                end
+            end
+        end
+    end
+    Notifications:Create("Theme Changed", "Successfully changed to " .. (type(theme) == "string" and theme or "Custom Theme"), 5)
+end
+
+function GUI:CreateWindow(settings)
+    local window = {
+        Name = settings.Name or "OmniUI Window",
+        Tabs = {},
+        Visible = false,
+        Minimised = false,
+        Hidden = false,
+        Instance = Instance.new("ScreenGui"),
+        MainFrame = Instance.new("Frame"),
+        Topbar = Instance.new("Frame"),
+        Title = Instance.new("TextLabel"),
+        Notifications = Notifications,
+        ConfigSaving = settings.ConfigurationSaving or { Enabled = false },
+        Keybind = settings.Keybind or Config.DefaultKeybind,
+    }
+
+    window.Instance.Name = "OmniUI_" .. window.Name
+    window.Instance.Parent = CoreGui
+    window.Instance.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    window.Instance.DisplayOrder = 100
+
+    window.MainFrame.Size = UDim2.new(0, 500, 0, 475)
+    window.MainFrame.Position = UDim2.new(0.5, -250, 0.5, -237.5)
+    window.MainFrame.BackgroundColor3 = GUI.SelectedTheme.Background
+    window.MainFrame.Parent = window.Instance
+
+    window.Topbar.Size = UDim2.new(1, 0, 0, 30)
+    window.Topbar.BackgroundColor3 = GUI.SelectedTheme.Topbar
+    window.Topbar.Parent = window.MainFrame
+
+    window.Title.Size = UDim2.new(1, -10, 1, 0)
+    window.Title.Position = UDim2.new(0, 5, 0, 0)
+    window.Title.Text = window.Name
+    window.Title.TextColor3 = GUI.SelectedTheme.TextColor
+    window.Title.BackgroundTransparency = 1
+    window.Title.Parent = window.Topbar
+
+    local closeButton = Instance.new("TextButton")
+    closeButton.Size = UDim2.new(0, 20, 0, 20)
+    closeButton.Position = UDim2.new(1, -25, 0, 5)
+    closeButton.Text = "X"
+    closeButton.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+    closeButton.TextColor3 = GUI.SelectedTheme.TextColor
+    closeButton.Parent = window.Topbar
+
+    local minimiseButton = Instance.new("TextButton")
+    minimiseButton.Size = UDim2.new(0, 20, 0, 20)
+    minimiseButton.Position = UDim2.new(1, -50, 0, 5)
+    minimiseButton.Text = "-"
+    minimiseButton.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+    minimiseButton.TextColor3 = GUI.SelectedTheme.TextColor
+    minimiseButton.Parent = window.Topbar
+
+    local dragBar = Instance.new("Frame")
+    dragBar.Size = UDim2.new(0, 100, 0, 4)
+    dragBar.Position = UDim2.new(0.5, -50, 0, -10)
+    dragBar.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+    dragBar.BackgroundTransparency = 0.7
+    dragBar.Parent = window.MainFrame
+
+    local dragInteract = Instance.new("TextButton")
+    dragInteract.Size = UDim2.new(1, 0, 1, 0)
+    dragInteract.BackgroundTransparency = 1
+    dragInteract.Text = ""
+    dragInteract.Parent = dragBar
+
+    -- Делаем окно перетаскиваемым
+    local dragging, relative
+    dragInteract.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            relative = window.MainFrame.AbsolutePosition - UserInputService:GetMouseLocation()
+        end
+    end)
+
+    dragInteract.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if dragging and not window.Hidden then
+            local position = UserInputService:GetMouseLocation() + relative
+            TweenService:Create(window.MainFrame, TweenInfo.new(0.1), {Position = UDim2.fromOffset(position.X, position.Y)}):Play()
+        end
+    end)
+
+    closeButton.MouseButton1Click:Connect(function()
+        window:SetVisible(false)
+    end)
+
+    minimiseButton.MouseButton1Click:Connect(function()
+        window.Minimised = not window.Minimised
+        if window.Minimised then
+            TweenService:Create(window.MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 500, 0, 30)}):Play()
+        else
+            TweenService:Create(window.MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 500, 0, 475)}):Play()
+        end
+    end)
+
+    function window:CreateTab(tabName, icon)
+        local tab = {
+            Name = tabName,
+            Elements = {},
+            Instance = Instance.new("Frame"),
+            Button = Instance.new("TextButton"),
+        }
+
+        tab.Instance.Size = UDim2.new(1, 0, 1, -30)
+        tab.Instance.Position = UDim2.new(0, 0, 0, 30)
+        tab.Instance.BackgroundTransparency = 1
+        tab.Instance.Parent = window.MainFrame
+        tab.Instance.Visible = false
+
+        tab.Button.Size = UDim2.new(0, 100, 0, 30)
+        tab.Button.Position = UDim2.new(#window.Tabs * 0.2, 0, 0, 0)
+        tab.Button.Text = tabName
+        tab.Button.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+        tab.Button.TextColor3 = GUI.SelectedTheme.TextColor
+        tab.Button.Parent = window.Topbar
+
+        if icon then
+            local tabIcon = Instance.new("ImageLabel")
+            tabIcon.Size = UDim2.new(0, 20, 0, 20)
+            tabIcon.Position = UDim2.new(0, 5, 0, 5)
+            tabIcon.Image = "rbxassetid://" .. (icon or 0)
+            tabIcon.BackgroundTransparency = 1
+            tabIcon.Parent = tab.Button
+        end
+
+        tab.Button.MouseButton1Click:Connect(function()
+            for _, t in ipairs(window.Tabs) do
+                t.Instance.Visible = (t == tab)
+                t.Button.BackgroundColor3 = (t == tab) and GUI.SelectedTheme.ElementBackgroundHover or GUI.SelectedTheme.ElementBackground
+            end
+        end)
+
+        table.insert(window.Tabs, tab)
+        if #window.Tabs == 1 then
+            tab.Instance.Visible = true
+            tab.Button.BackgroundColor3 = GUI.SelectedTheme.ElementBackgroundHover
+        end
+
+        function tab:CreateButton(name, callback)
+            local button = Instance.new("TextButton")
+            button.Size = UDim2.new(1, -10, 0, 40)
+            button.Position = UDim2.new(0, 5, 0, #tab.Elements * 45)
+            button.Text = name
+            button.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            button.TextColor3 = GUI.SelectedTheme.TextColor
+            button.Parent = tab.Instance
+
+            local uiStroke = Instance.new("UIStroke")
+            uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Parent = button
+
+            button.MouseButton1Click:Connect(function()
+                local success, err = pcall(callback)
+                if not success then
+                    Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                end
+            end)
+
+            button.MouseEnter:Connect(function()
+                TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = GUI.SelectedTheme.ElementBackgroundHover}):Play()
+            end)
+
+            button.MouseLeave:Connect(function()
+                TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = GUI.SelectedTheme.ElementBackground}):Play()
+            end)
+
+            table.insert(tab.Elements, button)
+            return button
+        end
+
+        function tab:CreateToggle(name, default, callback, flag)
+            local toggle = {
+                Value = default or false,
+                Callback = callback or function() end,
+                Flag = flag,
+            }
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -10, 0, 40)
+            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 45)
+            frame.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            frame.Parent = tab.Instance
+
+            local uiStroke = Instance.new("UIStroke")
+            uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Parent = frame
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.8, 0, 1, 0)
+            label.Text = name
+            label.TextColor3 = GUI.SelectedTheme.TextColor
+            label.BackgroundTransparency = 1
+            label.Parent = frame
+
+            local switch = Instance.new("TextButton")
+            switch.Size = UDim2.new(0, 50, 0, 20)
+            switch.Position = UDim2.new(0.85, 0, 0.25, 0)
+            switch.Text = toggle.Value and "On" or "Off"
+            switch.BackgroundColor3 = toggle.Value and GUI.SelectedTheme.ToggleEnabled or GUI.SelectedTheme.ToggleDisabled
+            switch.TextColor3 = GUI.SelectedTheme.TextColor
+            switch.Parent = frame
+
+            switch.MouseButton1Click:Connect(function()
+                toggle.Value = not toggle.Value
+                switch.Text = toggle.Value and "On" or "Off"
+                switch.BackgroundColor3 = toggle.Value and GUI.SelectedTheme.ToggleEnabled or GUI.SelectedTheme.ToggleDisabled
+                local success, err = pcall(toggle.Callback, toggle.Value)
+                if not success then
+                    Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                end
+                if toggle.Flag then
+                    OmniUI.Flags[toggle.Flag] = toggle.Value
+                    if window.ConfigSaving.Enabled then
+                        Configurations:Save(OmniUI.Flags)
+                    end
+                end
+            end)
+
+            table.insert(tab.Elements, frame)
+            return toggle
+        end
+
+        function tab:CreateSlider(name, range, increment, suffix, default, callback, flag)
+            local slider = {
+                Value = default or range[1],
+                Callback = callback or function() end,
+                Flag = flag,
+            }
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -10, 0, 50)
+            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 55)
+            frame.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            frame.Parent = tab.Instance
+
+            local uiStroke = Instance.new("UIStroke")
+            uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Parent = frame
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, -10, 0, 20)
+            label.Text = name
+            label.TextColor3 = GUI.SelectedTheme.TextColor
+            label.BackgroundTransparency = 1
+            label.Parent = frame
+
+            local sliderBar = Instance.new("Frame")
+            sliderBar.Size = UDim2.new(1, -10, 0, 10)
+            sliderBar.Position = UDim2.new(0, 5, 0, 25)
+            sliderBar.BackgroundColor3 = GUI.SelectedTheme.SliderBackground
+            sliderBar.Parent = frame
+
+            local progress = Instance.new("Frame")
+            progress.Size = UDim2.new((slider.Value - range[1]) / (range[2] - range[1]), 0, 1, 0)
+            progress.BackgroundColor3 = GUI.SelectedTheme.SliderProgress
+            progress.Parent = sliderBar
+
+            local valueLabel = Instance.new("TextLabel")
+            valueLabel.Size = UDim2.new(0, 50, 0, 20)
+            valueLabel.Position = UDim2.new(1, -55, 0, 0)
+            valueLabel.Text = tostring(slider.Value) .. (suffix or "")
+            valueLabel.TextColor3 = GUI.SelectedTheme.TextColor
+            valueLabel.BackgroundTransparency = 1
+            valueLabel.Parent = frame
+
+            local dragging
+            sliderBar.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = true
+                end
+            end)
+
+            sliderBar.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = false
+                end
+            end)
+
+            RunService.RenderStepped:Connect(function()
+                if dragging then
+                    local mouseX = UserInputService:GetMouseLocation().X
+                    local barX = sliderBar.AbsolutePosition.X
+                    local barWidth = sliderBar.AbsoluteSize.X
+                    local relative = math.clamp((mouseX - barX) / barWidth, 0, 1)
+                    slider.Value = math.floor(range[1] + (range[2] - range[1]) * relative / increment + 0.5) * increment
+                    progress.Size = UDim2.new(relative, 0, 1, 0)
+                    valueLabel.Text = tostring(slider.Value) .. (suffix or "")
+                    local success, err = pcall(slider.Callback, slider.Value)
+                    if not success then
+                        Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                    end
+                    if slider.Flag then
+                        OmniUI.Flags[slider.Flag] = slider.Value
+                        if window.ConfigSaving.Enabled then
+                            Configurations:Save(OmniUI.Flags)
+                        end
+                    end
+                end
+            end)
+
+            table.insert(tab.Elements, frame)
+            return slider
+        end
+
+        function tab:CreateInput(name, placeholder, default, callback, flag)
+            local input = {
+                Value = default or "",
+                Callback = callback or function() end,
+                Flag = flag,
+            }
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -10, 0, 40)
+            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 45)
+            frame.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            frame.Parent = tab.Instance
+
+            local uiStroke = Instance.new("UIStroke")
+            uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Parent = frame
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.5, 0, 1, 0)
+            label.Text = name
+            label.TextColor3 = GUI.SelectedTheme.TextColor
+            label.BackgroundTransparency = 1
+            label.Parent = frame
+
+            local textBox = Instance.new("TextBox")
+            textBox.Size = UDim2.new(0.5, -5, 0, 20)
+            textBox.Position = UDim2.new(0.5, 5, 0.25, 0)
+            textBox.Text = input.Value
+            textBox.PlaceholderText = placeholder or "Enter text..."
+            textBox.TextColor3 = GUI.SelectedTheme.TextColor
+            textBox.BackgroundColor3 = GUI.SelectedTheme.InputBackground
+            textBox.Parent = frame
+
+            textBox.FocusLost:Connect(function(enterPressed)
+                if enterPressed then
+                    input.Value = textBox.Text
+                    local success, err = pcall(input.Callback, input.Value)
+                    if not success then
+                        Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                    end
+                    if input.Flag then
+                        OmniUI.Flags[input.Flag] = input.Value
+                        if window.ConfigSaving.Enabled then
+                            Configurations:Save(OmniUI.Flags)
+                        end
+                    end
+                end
+            end)
+
+            table.insert(tab.Elements, frame)
+            return input
+        end
+
+        function tab:CreateDropdown(name, options, default, multiple, callback, flag)
+            local dropdown = {
+                Value = default or (multiple and {} or options[1]),
+                Callback = callback or function() end,
+                Flag = flag,
+                Multiple = multiple,
+            }
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -10, 0, 40)
+            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 45)
+            frame.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            frame.Parent = tab.Instance
+
+            local uiStroke = Instance.new("UIStroke")
+            uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Parent = frame
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.5, 0, 1, 0)
+            label.Text = name
+            label.TextColor3 = GUI.SelectedTheme.TextColor
+            label.BackgroundTransparency = 1
+            label.Parent = frame
+
+            local dropdownButton = Instance.new("TextButton")
+            dropdownButton.Size = UDim2.new(0.5, -5, 0, 20)
+            dropdownButton.Position = UDim2.new(0.5, 5, 0.25, 0)
+            dropdownButton.Text = multiple and table.concat(dropdown.Value, ", ") or dropdown.Value
+            dropdownButton.BackgroundColor3 = GUI.SelectedTheme.DropdownUnselected
+            dropdownButton.TextColor3 = GUI.SelectedTheme.TextColor
+            dropdownButton.Parent = frame
+
+            local dropdownList = Instance.new("Frame")
+            dropdownList.Size = UDim2.new(0.5, -5, 0, 0)
+            dropdownList.Position = UDim2.new(0.5, 5, 0, 25)
+            dropdownList.BackgroundColor3 = GUI.SelectedTheme.DropdownUnselected
+            dropdownList.Visible = false
+            dropdownList.Parent = frame
+
+            local uiListLayout = Instance.new("UIListLayout")
+            uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            uiListLayout.Parent = dropdownList
+
+            local function updateList()
+                for _, child in ipairs(dropdownList:GetChildren()) do
+                    if child:IsA("TextButton") then
+                        child:Destroy()
+                    end
+                end
+                local height = 0
+                for _, option in ipairs(options) do
+                    local optionButton = Instance.new("TextButton")
+                    optionButton.Size = UDim2.new(1, 0, 0, 20)
+                    optionButton.Text = option
+                    optionButton.BackgroundColor3 = (multiple and table.find(dropdown.Value, option)) or (dropdown.Value == option) and GUI.SelectedTheme.DropdownSelected or GUI.SelectedTheme.DropdownUnselected
+                    optionButton.TextColor3 = GUI.SelectedTheme.TextColor
+                    optionButton.Parent = dropdownList
+
+                    optionButton.MouseButton1Click:Connect(function()
+                        if multiple then
+                            if table.find(dropdown.Value, option) then
+                                table.remove(dropdown.Value, table.find(dropdown.Value, option))
+                            else
+                                table.insert(dropdown.Value, option)
+                            end
+                        else
+                            dropdown.Value = option
+                            dropdownList.Visible = false
+                        end
+                        dropdownButton.Text = multiple and table.concat(dropdown.Value, ", ") or dropdown.Value
+                        updateList()
+                        local success, err = pcall(dropdown.Callback, dropdown.Value)
+                        if not success then
+                            Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                        end
+                        if dropdown.Flag then
+                            OmniUI.Flags[dropdown.Flag] = dropdown.Value
+                            if window.ConfigSaving.Enabled then
+                                Configurations:Save(OmniUI.Flags)
+                            end
+                        end
+                    end)
+                    height = height + 20
+                end
+                dropdownList.Size = UDim2.new(0.5, -5, 0, math.min(height, 100))
+            end
+
+            updateList()
+
+            dropdownButton.MouseButton1Click:Connect(function()
+                dropdownList.Visible = not dropdownList.Visible
+            end)
+
+            table.insert(tab.Elements, frame)
+            return dropdown
+        end
+
+        function tab:CreateKeybind(name, default, hold, callback, flag)
+            local keybind = {
+                Value = default or "None",
+                Callback = callback or function() end,
+                Flag = flag,
+                Hold = hold,
+                Binding = false,
+            }
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -10, 0, 40)
+            frame.Position = UDim2.new(0, 5, 0, #tab.Elements * 45)
+            frame.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            frame.Parent = tab.Instance
+
+            local uiStroke = Instance.new("UIStroke")
+            uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Parent = frame
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.5, 0, 1, 0)
+            label.Text = name
+            label.TextColor3 = GUI.SelectedTheme.TextColor
+            label.BackgroundTransparency = 1
+            label.Parent = frame
+
+            local keybindButton = Instance.new("TextButton")
+            keybindButton.Size = UDim2.new(0.5, -5, 0, 20)
+            keybindButton.Position = UDim2.new(0.5, 5, 0.25, 0)
+            keybindButton.Text = keybind.Value
+            keybindButton.BackgroundColor3 = GUI.SelectedTheme.InputBackground
+            keybindButton.TextColor3 = GUI.SelectedTheme.TextColor
+            keybindButton.Parent = frame
+
+            keybindButton.MouseButton1Click:Connect(function()
+                keybind.Binding = true
+                keybindButton.Text = "..."
+            end)
+
+            local connection
+            connection = UserInputService.InputBegan:Connect(function(input, processed)
+                if keybind.Binding and not processed then
+                    local key = input.KeyCode.Name
+                    if key ~= "Unknown" then
+                        keybind.Value = key
+                        keybindButton.Text = key
+                        keybind.Binding = false
+                        local success, err = pcall(keybind.Callback, key)
+                        if not success then
+                            Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                        end
+                        if keybind.Flag then
+                            OmniUI.Flags[keybind.Flag] = keybind.Value
+                            if window.ConfigSaving.Enabled then
+                                Configurations:Save(OmniUI.Flags)
+                            end
+                        end
+                    end
+                elseif keybind.Value ~= "None" and input.KeyCode.Name == keybind.Value and not processed then
+                    if keybind.Hold then
+                        local held = true
+                        local holdConnection
+                        holdConnection = input.Changed:Connect(function(prop)
+                            if prop == "UserInputState" then
+                                held = false
+                                holdConnection:Disconnect()
+                            end
+                        end)
+                        task.spawn(function()
+                            while held do
+                                local success, err = pcall(keybind.Callback, true)
+                                if not success then
+                                    Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                                end
+                                task.wait()
+                            end
+                            local success, err = pcall(keybind.Callback, false)
+                            if not success then
+                                Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                            end
+                        end)
+                    else
+                        local success, err = pcall(keybind.Callback, true)
+                        if not success then
+                            Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                        end
+                    end
+                end
+            end)
+
+            frame.Destroying:Connect(function()
+                connection:Disconnect()
+            end)
+
+            table.insert(tab.Elements, frame)
+            return keybind
+        end
+
+        function tab:CreateLabel(name, icon, color, warning)
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, -10, 0, 30)
+            label.Position = UDim2.new(0, 5, 0, #tab.Elements * 35)
+            label.Text = name
+            label.TextColor3 = color or GUI.SelectedTheme.TextColor
+            label.BackgroundTransparency = 1
+            label.Parent = tab.Instance
+
+            if icon then
+                local iconLabel = Instance.new("ImageLabel")
+                iconLabel.Size = UDim2.new(0, 20, 0, 20)
+                iconLabel.Position = UDim2.new(0, -25, 0, 5)
+                iconLabel.Image = "rbxassetid://" .. icon
+                iconLabel.BackgroundTransparency = 1
+                iconLabel.Parent = label
+            end
+
+            if warning then
+                label.TextColor3 = Color3.fromRGB(255, 159, 49)
+            end
+
+            table.insert(tab.Elements, label)
+            return label
+        end
+
+        function tab:CreateParagraph(title, content)
+            local paragraph = Instance.new("Frame")
+            paragraph.Size = UDim2.new(1, -10, 0, 60)
+            paragraph.Position = UDim2.new(0, 5, 0, #tab.Elements * 65)
+            paragraph.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+            paragraph.Parent = tab.Instance
+
+            local uiStroke = Instance.new("UIStroke")
+            uiStroke.Color = GUI.SelectedTheme.ElementStroke
+            uiStroke.Parent = paragraph
+
+            local titleLabel = Instance.new("TextLabel")
+            titleLabel.Size = UDim2.new(1, -10, 0, 20)
+            titleLabel.Text = title
+            titleLabel.TextColor3 = GUI.SelectedTheme.TextColor
+            titleLabel.BackgroundTransparency = 1
+            titleLabel.Parent = paragraph
+
+            local contentLabel = Instance.new("TextLabel")
+            contentLabel.Size = UDim2.new(1, -10, 0, 40)
+            contentLabel.Position = UDim2.new(0, 5, 0, 20)
+            contentLabel.Text = content
+            contentLabel.TextColor3 = GUI.SelectedTheme.TextColor
+            contentLabel.TextWrapped = true
+            contentLabel.BackgroundTransparency = 1
+            contentLabel.Parent = paragraph
+
+            table.insert(tab.Elements, paragraph)
+            return paragraph
+        end
+
+        return tab
+    end
+
+    function window:SetVisible(visible)
+        window.Visible = visible
+        window.Hidden = not visible
+        window.Instance.Enabled = visible
+        if visible then
+            Notifications:Create("Interface Shown", "OmniUI interface is now visible.", 5)
+        else
+            Notifications:Create("Interface Hidden", "OmniUI interface is hidden. Press " .. window.Keybind .. " to show.", 5)
+        end
+    end
+
+    function window:LoadConfiguration()
+        if not window.ConfigSaving.Enabled then return end
+        local data = Configurations:Load()
+        for flag, value in pairs(data) do
+            if OmniUI.Flags[flag] then
+                if type(value) == "table" and value.R and value.G and value.B then
+                    OmniUI.Flags[flag]:Set(Color3.fromRGB(value.R, value.G, value.B))
+                else
+                    OmniUI.Flags[flag]:Set(value)
+                end
+            end
+        end
+        Notifications:Create("Configuration Loaded", "Settings have been loaded from previous session.", 5)
+    end
+
+    local keybindConnection = UserInputService.InputBegan:Connect(function(input, processed)
+        if input.KeyCode.Name == window.Keybind and not processed then
+            window:SetVisible(not window.Visible)
+        end
+    end)
+
+    window.Instance.Destroying:Connect(function()
+        keybindConnection:Disconnect()
+    end)
+
+    GUI.Windows[window.Name] = window
+    Analytics:SendReport()
+    return window
+end
+
+-- Инициализация
+OmniUI.GUI = GUI
+OmniUI.API = API
+OmniUI.Notifications = Notifications
+OmniUI.Configurations = Configurations
+OmniUI.Analytics = Analytics
+
+-- Пример использования
+if RunService:IsStudio() then
+    local window = GUI:CreateWindow({
+        Name = "OmniUI Example",
+        ConfigurationSaving = { Enabled = true, FileName = "ExampleConfig" },
+    })
+
+    local tab = window:CreateTab("Main", 4483362458)
+    tab:CreateButton("God Mode", function()
+        local playerId = Players.LocalPlayer.UserId
+        local data = API:UpdateInventory(playerId, "god_mode", 1)
+        Notifications:Create("Success", "God Mode Activated: " .. (data and data.status or "No data"), 5)
+    end)
+
+    tab:CreateToggle("Speed Hack", false, function(value)
+        local playerId = Players.LocalPlayer.UserId
+        local data = API:UpdateInventory(playerId, "speed_hack", value and 1 or 0)
+        Notifications:Create("Success", "Speed Hack: " .. (value and "On" or "Off"), 5)
+    end, "SpeedHackToggle")
+
+    tab:CreateSlider("Health", {0, 100}, 10, "%", 50, function(value)
+        print("Health set to: " .. value)
+    end, "HealthSlider")
+
+    tab:CreateInput("Player Name", "Enter name...", "", function(text)
+        print("Player name set to: " .. text)
+    end, "PlayerNameInput")
+
+    tab:CreateDropdown("Theme", {"Default", "DarkBlue"}, "Default", false, function(theme)
+        GUI:ChangeTheme(theme)
+    end, "ThemeDropdown")
+
+    tab:CreateKeybind("Teleport", "T", false, function()
+        print("Teleport activated")
+    end, "TeleportKeybind")
+
+    tab:CreateLabel("Status: Online")
+    tab:CreateParagraph("Welcome", "This is an example of OmniUI, created to demonstrate its power.")
+
+    window:SetVisible(true)
+    window:LoadConfiguration()
+end
+
+return OmniUI

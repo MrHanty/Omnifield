@@ -1,10 +1,11 @@
+
 -- OmniUI API: Модульная библиотека для создания стильных интерфейсов в Roblox
--- Версия: 1.2.0
+-- Версия: 1.2.1
 -- Лицензия: MIT
 -- Автор: Анонимный разработчик
 
 local OmniUI = {
-    Version = "1.2.0",
+    Version = "1.2.1",
     Build = "OMNI-CYBERFORGE-V2",
     Flags = {},
     Themes = {
@@ -358,9 +359,9 @@ function GUI:CreateWindow(settings)
     local window = {
         Name = settings.Name or "OmniUI Hack",
         Tabs = {},
-        Visible = false,
+        Visible = true, -- Изменено: окно видно по умолчанию
         Minimised = false,
-        Hidden = false,
+        Hidden = false, -- Изменено: окно не скрыто по умолчанию
         Instance = Instance.new("ScreenGui"),
         MainFrame = Instance.new("Frame"),
         Topbar = Instance.new("Frame"),
@@ -374,11 +375,12 @@ function GUI:CreateWindow(settings)
     window.Instance.Parent = CoreGui
     window.Instance.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     window.Instance.DisplayOrder = 100
+    window.Instance.Enabled = true -- Изменено: окно активно по умолчанию
 
     window.MainFrame.Size = UDim2.new(0, 450, 0, 400)
     window.MainFrame.Position = UDim2.new(0.5, -225, 0.5, -200)
     window.MainFrame.BackgroundColor3 = GUI.SelectedTheme.Background
-    window.MainFrame.BackgroundTransparency = 0.1
+    window.MainFrame.BackgroundTransparency = 0 -- Изменено: без прозрачности по умолчанию
     window.MainFrame.Parent = window.Instance
 
     local uiGradient = Instance.new("UIGradient")
@@ -441,10 +443,6 @@ function GUI:CreateWindow(settings)
     dragInteract.Text = ""
     dragInteract.Parent = dragBar
 
-    -- Анимация появления
-    window.MainFrame.Position = UDim2.new(0.5, -225, 0.5, 200)
-    Animations:Create(window.MainFrame, {Position = UDim2.new(0.5, -225, 0.5, -200), BackgroundTransparency = 0}, 0.7)
-
     -- Оптимизированное перетаскивание
     local dragging, dragStart, startPos
     dragInteract.InputBegan:Connect(function(input)
@@ -463,7 +461,7 @@ function GUI:CreateWindow(settings)
         end
     end)
 
-    dragInteract.InputEnded:Connect(function(input)
+    dragInteract.Input Ended:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
@@ -779,7 +777,7 @@ function GUI:CreateWindow(settings)
 
         --- Создаёт поле ввода
         -- @param name Текст поля
-        -- @param placeholder Подсказка
+        -- @param placeholderJITПодсказка
         -- @param default Начальное значение
         -- @param callback Функция обратного вызова
         -- @param flag Флаг для сохранения
@@ -816,7 +814,7 @@ function GUI:CreateWindow(settings)
 
             local textBox = Instance.new("TextBox")
             textBox.Size = UDim2.new(0.5, -5, 0, 25)
-            textBox.Position = UDim2.new(0.5, 5, 165, 0)
+            textBox.Position = UDim2.new(0.5, 5, 0.15, 0)
             textBox.Text = input.Value
             textBox.PlaceholderText = placeholder or "Введите текст..."
             textBox.TextColor3 = GUI.SelectedTheme.TextColor
@@ -1120,7 +1118,7 @@ function GUI:CreateWindow(settings)
             label.TextStrokeTransparency = 0.8
             label.TextStrokeColor3 = warning and Color3.fromRGB(200, 0, 0) or GUI.SelectedTheme.TextGlow
             label.BackgroundTransparency = 1
-            label.Parent =research
+            label.Parent = tab.Instance
 
             if icon then
                 local iconLabel = Instance.new("ImageLabel")
@@ -1219,6 +1217,9 @@ function GUI:CreateWindow(settings)
         keybindConnection:Disconnect()
     end)
 
+    -- Показ уведомления при создании окна, так как оно сразу видно
+    Notifications:Create("Хак активирован", "OmniUI захватил систему.", 5, "Info")
+
     GUI.Windows[window.Name] = window
     Analytics:SendReport()
     return window
@@ -1272,7 +1273,6 @@ if RunService:IsStudio() then
     tab:CreateLabel("Статус: Онлайн", "Info")
     tab:CreateParagraph("CyberForge", "Разрушайте систему с мощью OmniUI.")
 
-    window:SetVisible(true)
     window:LoadConfiguration()
 
     -- Тест смены темы

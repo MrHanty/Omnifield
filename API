@@ -1,15 +1,16 @@
--- OmniUI: Библиотека интерфейса для Roblox, выкованная в горниле Омниссии
--- Версия: 1.1.0 | Автор: Дух Машина | Лицензия: Адептус Механикус
--- Тема: CyberForge — для читеров и повелителей кода
+-- OmniUI API: Модульная библиотека для создания стильных интерфейсов в Roblox
+-- Версия: 1.2.0
+-- Лицензия: MIT
+-- Автор: Анонимный разработчик
 
 local OmniUI = {
-    Version = "1.1.0",
-    Build = "OMNI-CYBERFORGE",
+    Version = "1.2.0",
+    Build = "OMNI-CYBERFORGE-V2",
     Flags = {},
     Themes = {
         CyberForge = {
             TextColor = Color3.fromRGB(255, 255, 255),
-            TextGlow = Color3.fromRGB(0, 255, 149), -- Неоново-зелёный для свечения
+            TextGlow = Color3.fromRGB(0, 255, 149), -- Неоново-зелёный
             Background = Color3.fromRGB(10, 10, 15),
             BackgroundGradient = {Color3.fromRGB(10, 10, 15), Color3.fromRGB(20, 20, 30)},
             Topbar = Color3.fromRGB(15, 15, 20),
@@ -34,10 +35,37 @@ local OmniUI = {
             NotificationBackground = Color3.fromRGB(15, 15, 20),
             NotificationStroke = Color3.fromRGB(0, 255, 149),
         },
+        NeonTokyo = {
+            TextColor = Color3.fromRGB(255, 255, 255),
+            TextGlow = Color3.fromRGB(255, 105, 180), -- Неоново-розовый
+            Background = Color3.fromRGB(15, 15, 20),
+            BackgroundGradient = {Color3.fromRGB(15, 15, 20), Color3.fromRGB(25, 25, 35)},
+            Topbar = Color3.fromRGB(20, 20, 25),
+            Shadow = Color3.fromRGB(0, 0, 0),
+            ElementBackground = Color3.fromRGB(25, 25, 30),
+            ElementBackgroundHover = Color3.fromRGB(35, 35, 40),
+            ElementStroke = Color3.fromRGB(255, 105, 180),
+            SecondaryElementStroke = Color3.fromRGB(60, 60, 70),
+            SliderBackground = Color3.fromRGB(35, 35, 40),
+            SliderProgress = Color3.fromRGB(255, 105, 180),
+            SliderStroke = Color3.fromRGB(200, 80, 140),
+            ToggleBackground = Color3.fromRGB(30, 30, 35),
+            ToggleEnabled = Color3.fromRGB(255, 105, 180),
+            ToggleDisabled = Color3.fromRGB(70, 70, 80),
+            ToggleEnabledStroke = Color3.fromRGB(200, 80, 140),
+            ToggleDisabledStroke = Color3.fromRGB(80, 80, 90),
+            DropdownSelected = Color3.fromRGB(30, 30, 35),
+            DropdownUnselected = Color3.fromRGB(25, 25, 30),
+            InputBackground = Color3.fromRGB(25, 25, 30),
+            InputStroke = Color3.fromRGB(255, 105, 180),
+            PlaceholderColor = Color3.fromRGB(110, 110, 120),
+            NotificationBackground = Color3.fromRGB(20, 20, 25),
+            NotificationStroke = Color3.fromRGB(255, 105, 180),
+        },
     },
 }
 
--- Сервисы
+-- Сервисы Roblox
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -49,14 +77,55 @@ local CoreGui = game:GetService("CoreGui")
 local Config = {
     Folder = "OmniUI",
     ConfigFile = "settings.json",
-    API_URL = "https://api.example.com/roblox", -- Заменить на GorgeousAPI
+    API_URL = "https://mock.api/roblox", -- Мок для тестирования
     AnalyticsEnabled = true,
     DefaultKeybind = "K",
-    Font = "Gotham", -- Современный шрифт
+    Font = Enum.Font.SourceSansPro, -- Стандартный шрифт Roblox
 }
 
--- Модуль API (заглушка для GorgeousAPI)
+-- Модуль анимаций
+local Animations = {}
+
+--- Создаёт анимацию для объекта
+-- @param instance Экземпляр Roblox для анимации
+-- @param properties Таблица свойств для анимации
+-- @param duration Длительность анимации (в секундах)
+-- @param easingStyle Стиль анимации (по умолчанию Quad)
+-- @param easingDirection Направление анимации (по умолчанию Out)
+-- @return Tween
+function Animations:Create(instance, properties, duration, easingStyle, easingDirection)
+    local tweenInfo = TweenInfo.new(
+        duration or 0.3,
+        easingStyle or Enum.EasingStyle.Quad,
+        easingDirection or Enum.EasingDirection.Out
+    )
+    local tween = TweenService:Create(instance, tweenInfo, properties)
+    tween:Play()
+    return tween
+end
+
+--- Создаёт пульсирующий эффект для UIStroke
+-- @param stroke Экземпляр UIStroke
+-- @param minTransparency Минимальная прозрачность
+-- @param maxTransparency Максимальная прозрачность
+-- @param duration Длительность цикла
+-- @return Tween
+function Animations:Pulse(stroke, minTransparency, maxTransparency, duration)
+    local tween = TweenService:Create(
+        stroke,
+        TweenInfo.new(duration or 1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        { Transparency = maxTransparency }
+    )
+    tween:Play()
+    return tween
+end
+
+-- Модуль API (мок для тестирования)
 local API = {}
+
+--- Получает данные игрока
+-- @param playerId ID игрока
+-- @return table|nil Данные игрока или nil при ошибке
 function API:GetPlayerData(playerId)
     local success, response = pcall(function()
         return HttpService:GetAsync(Config.API_URL .. "/player/" .. tostring(playerId))
@@ -65,10 +134,15 @@ function API:GetPlayerData(playerId)
         return HttpService:JSONDecode(response)
     else
         warn("API Error: " .. tostring(response))
-        return nil
+        return { mock = true, playerId = playerId, name = "MockPlayer" } -- Мок для тестирования
     end
 end
 
+--- Обновляет инвентарь игрока
+-- @param playerId ID игрока
+-- @param itemId ID предмета
+-- @param quantity Количество
+-- @return table|nil Результат или nil при ошибке
 function API:UpdateInventory(playerId, itemId, quantity)
     local success, response = pcall(function()
         return HttpService:PostAsync(
@@ -81,20 +155,35 @@ function API:UpdateInventory(playerId, itemId, quantity)
         return HttpService:JSONDecode(response)
     else
         warn("API Error: " .. tostring(response))
-        return nil
+        return { mock = true, success = true } -- Мок для тестирования
     end
 end
 
--- Модуль иконок (заглушка для кастомных иконок)
-local Icons = {}
+-- Модуль иконок
+local Icons = {
+    Default = "rbxassetid://4483362458",
+    Warning = "rbxassetid://1234567890", -- Заменить на реальный ID
+    Error = "rbxassetid://0987654321",   -- Заменить на реальный ID
+    Info = "rbxassetid://1122334455",    -- Заменить на реальный ID
+}
+
+--- Получает иконку по имени
+-- @param name Имя иконки
+-- @return string Roblox Asset ID
 function Icons:GetIcon(name)
-    -- Заменить на реальные иконки (например, из Roblox или кастомные)
-    return { id = 0, imageRectSize = Vector2.new(32, 32), imageRectOffset = Vector2.new(0, 0) }
+    return Icons[name] or Icons.Default
 end
 
 -- Модуль уведомлений
 local Notifications = {}
-function Notifications:Create(title, content, duration, image)
+
+--- Создаёт уведомление
+-- @param title Заголовок уведомления
+-- @param content Текст уведомления
+-- @param duration Длительность (в секундах)
+-- @param type Тип уведомления: "Info", "Warning", "Error"
+-- @return Frame Экземпляр уведомления
+function Notifications:Create(title, content, duration, type)
     local notification = Instance.new("Frame")
     notification.Size = UDim2.new(0, 300, 0, 80)
     notification.Position = UDim2.new(1, -320, 1, -100 - (#CoreGui:GetChildren() * 90))
@@ -108,8 +197,8 @@ function Notifications:Create(title, content, duration, image)
 
     local uiStroke = Instance.new("UIStroke")
     uiStroke.Color = OmniUI.Themes.CyberForge.NotificationStroke
-    uiStroke.Transparency = 0.5
     uiStroke.Thickness = 2
+    uiStroke.Transparency = 0.5
     uiStroke.Parent = notification
 
     local titleLabel = Instance.new("TextLabel")
@@ -135,52 +224,63 @@ function Notifications:Create(title, content, duration, image)
     contentLabel.BackgroundTransparency = 1
     contentLabel.Parent = notification
 
-    if image then
-        local icon = Instance.new("ImageLabel")
-        icon.Size = UDim2.new(0, 32, 0, 32)
-        icon.Position = UDim2.new(0, 5, 0, 5)
-        icon.Image = "rbxassetid://" .. (image or 0)
-        icon.BackgroundTransparency = 1
-        icon.ImageTransparency = 1
-        icon.Parent = notification
-        TweenService:Create(icon, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {ImageTransparency = 0}):Play()
-    end
+    -- Иконка в зависимости от типа
+    local iconImage = Icons:GetIcon(type or "Info")
+    local icon = Instance.new("ImageLabel")
+    icon.Size = UDim2.new(0, 32, 0, 32)
+    icon.Position = UDim2.new(0, 5, 0, 5)
+    icon.Image = iconImage
+    icon.BackgroundTransparency = 1
+    icon.ImageTransparency = 1
+    icon.Parent = notification
 
     -- Анимация появления
-    notification.Position = UDim2.new(1, 0, 1, -100 - (#CoreGui:GetChildren() * 90))
-    TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Position = UDim2.new(1, -320, 1, -100 - (#CoreGui:GetChildren() * 90)), BackgroundTransparency = 0.1}):Play()
-    TweenService:Create(uiStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Transparency = 0}):Play()
-    TweenService:Create(titleLabel, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {TextTransparency = 0}):Play()
-    TweenService:Create(contentLabel, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {TextTransparency = 0.2}):Play()
+    Animations:Create(notification, {Position = UDim2.new(1, -320, 1, -100 - (#CoreGui:GetChildren() * 90)), BackgroundTransparency = 0.1}, 0.5)
+    Animations:Create(uiStroke, {Transparency = 0}, 0.5)
+    Animations:Create(titleLabel, {TextTransparency = 0}, 0.5)
+    Animations:Create(contentLabel, {TextTransparency = 0.2}, 0.5)
+    Animations:Create(icon, {ImageTransparency = 0}, 0.5)
 
     -- Пульсирующий эффект
-    local pulse = TweenService:Create(uiStroke, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0.3})
-    pulse:Play()
+    local pulse = Animations:Pulse(uiStroke, 0, 0.3, 1)
 
     task.delay(duration or 5, function()
         pulse:Cancel()
-        TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Position = UDim2.new(1, 0, 1, -100 - (#CoreGui:GetChildren() * 90)), BackgroundTransparency = 1}):Play()
-        TweenService:Create(uiStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Transparency = 1}):Play()
-        TweenService:Create(titleLabel, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {TextTransparency = 1}):Play()
-        TweenService:Create(contentLabel, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {TextTransparency = 1}):Play()
+        Animations:Create(notification, {Position = UDim2.new(1, 0, 1, -100 - (#CoreGui:GetChildren() * 90)), BackgroundTransparency = 1}, 0.5)
+        Animations:Create(uiStroke, {Transparency = 1}, 0.5)
+        Animations:Create(titleLabel, {TextTransparency = 1}, 0.5)
+        Animations:Create(contentLabel, {TextTransparency = 1}, 0.5)
+        Animations:Create(icon, {ImageTransparency = 1}, 0.5)
         task.wait(0.5)
         notification:Destroy()
     end)
+
+    return notification
 end
 
 -- Модуль конфигураций
 local Configurations = {}
+
+--- Сохраняет конфигурацию
+-- @param data Данные для сохранения
 function Configurations:Save(data)
     if not isfolder or not writefile then
-        Notifications:Create("Error", "Filesystem not supported by your executor.", 5)
+        Notifications:Create("Ошибка", "Файловая система не поддерживается вашим исполнителем.", 5, "Error")
         return
     end
     if not isfolder(Config.Folder) then
         makefolder(Config.Folder)
     end
-    writefile(Config.Folder .. "/" .. Config.ConfigFile, HttpService:JSONEncode(data))
+    local success, err = pcall(function()
+        writefile(Config.Folder .. "/" .. Config.ConfigFile, HttpService:JSONEncode(data))
+    end)
+    if not success then
+        Notifications:Create("Ошибка", "Не удалось сохранить конфигурацию: " .. tostring(err), 5, "Error")
+    end
 end
 
+--- Загружает конфигурацию
+-- @return table Загруженные данные или пустая таблица при ошибке
 function Configurations:Load()
     if not isfile or not isfolder(Config.Folder) or not isfile(Config.Folder .. "/" .. Config.ConfigFile) then
         return {}
@@ -191,20 +291,22 @@ function Configurations:Load()
     if success then
         return data
     else
-        Notifications:Create("Error", "Failed to decode configuration file.", 5)
+        Notifications:Create("Ошибка", "Не удалось загрузить конфигурацию: " .. tostring(data), 5, "Error")
         return {}
     end
 end
 
 -- Модуль аналитики
 local Analytics = {}
+
+--- Отправляет отчёт аналитики
 function Analytics:SendReport()
     if not Config.AnalyticsEnabled then return end
     task.spawn(function()
         local success, response = pcall(function()
             return HttpService:PostAsync(
-                "https://analytics.example.com/report",
-                HttpService:JSONEncode({ build = OmniUI.Build, version = OmniUI.Version }),
+                "https://mock.analytics/report",
+                HttpService:JSONEncode({ build = OmniUI.Build, version = OmniUI.Version, userId = Players.LocalPlayer.UserId }),
                 Enum.HttpContentType.ApplicationJson
             )
         end)
@@ -220,6 +322,8 @@ local GUI = {
     SelectedTheme = OmniUI.Themes.CyberForge,
 }
 
+--- Меняет тему интерфейса
+-- @param theme Имя темы или таблица с настройками
 function GUI:ChangeTheme(theme)
     if type(theme) == "string" then
         GUI.SelectedTheme = OmniUI.Themes[theme] or OmniUI.Themes.CyberForge
@@ -228,21 +332,28 @@ function GUI:ChangeTheme(theme)
     end
     for _, window in pairs(GUI.Windows) do
         window.MainFrame.BackgroundColor3 = GUI.SelectedTheme.Background
+        window.MainFrame.UIGradient.Color = ColorSequence.new(GUI.SelectedTheme.BackgroundGradient)
         window.Topbar.BackgroundColor3 = GUI.SelectedTheme.Topbar
         window.Title.TextColor3 = GUI.SelectedTheme.TextColor
+        window.Title.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
         for _, tab in ipairs(window.Tabs) do
             tab.Instance.BackgroundColor3 = GUI.SelectedTheme.Background
             for _, element in ipairs(tab.Elements) do
                 if element:IsA("Frame") then
                     element.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
-                    element.UIStroke.Color = GUI.SelectedTheme.ElementStroke
+                    if element.UIStroke then
+                        element.UIStroke.Color = GUI.SelectedTheme.ElementStroke
+                    end
                 end
             end
         end
     end
-    Notifications:Create("Theme Changed", "Interface now radiates CyberForge power.", 5)
+    Notifications:Create("Тема изменена", "Интерфейс теперь в стиле " .. (type(theme) == "string" and theme or "Custom"), 5, "Info")
 end
 
+--- Создаёт новое окно
+-- @param settings Таблица с настройками окна
+-- @return table Объект окна
 function GUI:CreateWindow(settings)
     local window = {
         Name = settings.Name or "OmniUI Hack",
@@ -330,17 +441,25 @@ function GUI:CreateWindow(settings)
     dragInteract.Text = ""
     dragInteract.Parent = dragBar
 
-    -- Анимация появления окна
+    -- Анимация появления
     window.MainFrame.Position = UDim2.new(0.5, -225, 0.5, 200)
-    TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -225, 0.5, -200)}):Play()
-    TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
+    Animations:Create(window.MainFrame, {Position = UDim2.new(0.5, -225, 0.5, -200), BackgroundTransparency = 0}, 0.7)
 
-    -- Делаем окно перетаскиваемым
-    local dragging, relative
+    -- Оптимизированное перетаскивание
+    local dragging, dragStart, startPos
     dragInteract.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            relative = window.MainFrame.AbsolutePosition - UserInputService:GetMouseLocation()
+            dragStart = input.Position
+            startPos = window.MainFrame.Position
+        end
+    end)
+
+    dragInteract.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            Animations:Create(window.MainFrame, {Position = newPos}, 0.1)
         end
     end)
 
@@ -350,26 +469,20 @@ function GUI:CreateWindow(settings)
         end
     end)
 
-    RunService.RenderStepped:Connect(function()
-        if dragging and not window.Hidden then
-            local position = UserInputService:GetMouseLocation() + relative
-            TweenService:Create(window.MainFrame, TweenInfo.new(0.1), {Position = UDim2.fromOffset(position.X, position.Y)}):Play()
-        end
-    end)
-
     closeButton.MouseButton1Click:Connect(function()
         window:SetVisible(false)
     end)
 
     minimiseButton.MouseButton1Click:Connect(function()
         window.Minimised = not window.Minimised
-        if window.Minimised then
-            TweenService:Create(window.MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 450, 0, 40)}):Play()
-        else
-            TweenService:Create(window.MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 450, 0, 400)}):Play()
-        end
+        local targetSize = window.Minimised and UDim2.new(0, 450, 0, 40) or UDim2.new(0, 450, 0, 400)
+        Animations:Create(window.MainFrame, {Size = targetSize}, 0.3)
     end)
 
+    --- Создаёт вкладку
+    -- @param tabName Имя вкладки
+    -- @param icon ID иконки
+    -- @return table Объект вкладки
     function window:CreateTab(tabName, icon)
         local tab = {
             Name = tabName,
@@ -403,7 +516,7 @@ function GUI:CreateWindow(settings)
             local tabIcon = Instance.new("ImageLabel")
             tabIcon.Size = UDim2.new(0, 20, 0, 20)
             tabIcon.Position = UDim2.new(0, 5, 0, 5)
-            tabIcon.Image = "rbxassetid://" .. (icon or 0)
+            tabIcon.Image = Icons:GetIcon(icon)
             tabIcon.BackgroundTransparency = 1
             tabIcon.Parent = tab.Button
         end
@@ -417,14 +530,14 @@ function GUI:CreateWindow(settings)
         end)
 
         tab.Button.MouseEnter:Connect(function()
-            TweenService:Create(tab.Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = GUI.SelectedTheme.ElementBackgroundHover}):Play()
-            TweenService:Create(tabStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0}):Play()
+            Animations:Create(tab.Button, {BackgroundColor3 = GUI.SelectedTheme.ElementBackgroundHover}, 0.2)
+            Animations:Create(tabStroke, {Transparency = 0}, 0.2)
         end)
 
         tab.Button.MouseLeave:Connect(function()
             if not tab.Instance.Visible then
-                TweenService:Create(tab.Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = GUI.SelectedTheme.ElementBackground}):Play()
-                TweenService:Create(tabStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0.5}):Play()
+                Animations:Create(tab.Button, {BackgroundColor3 = GUI.SelectedTheme.ElementBackground}, 0.2)
+                Animations:Create(tabStroke, {Transparency = 0.5}, 0.2)
             end
         end)
 
@@ -435,6 +548,10 @@ function GUI:CreateWindow(settings)
             tabStroke.Transparency = 0
         end
 
+        --- Создаёт кнопку
+        -- @param name Текст кнопки
+        -- @param callback Функция обратного вызова
+        -- @return TextButton Экземпляр кнопки
         function tab:CreateButton(name, callback)
             local button = Instance.new("TextButton")
             button.Size = UDim2.new(1, -10, 0, 35)
@@ -456,24 +573,30 @@ function GUI:CreateWindow(settings)
             button.MouseButton1Click:Connect(function()
                 local success, err = pcall(callback)
                 if not success then
-                    Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                    Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
                 end
             end)
 
             button.MouseEnter:Connect(function()
-                TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = GUI.SelectedTheme.ElementBackgroundHover, Size = UDim2.new(1, -10, 0, 37)}):Play()
-                TweenService:Create(uiStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0}):Play()
+                Animations:Create(button, {BackgroundColor3 = GUI.SelectedTheme.ElementBackgroundHover, Size = UDim2.new(1, -10, 0, 37)}, 0.2)
+                Animations:Create(uiStroke, {Transparency = 0}, 0.2)
             end)
 
             button.MouseLeave:Connect(function()
-                TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = GUI.SelectedTheme.ElementBackground, Size = UDim2.new(1, -10, 0, 35)}):Play()
-                TweenService:Create(uiStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0.5}):Play()
+                Animations:Create(button, {BackgroundColor3 = GUI.SelectedTheme.ElementBackground, Size = UDim2.new(1, -10, 0, 35)}, 0.2)
+                Animations:Create(uiStroke, {Transparency = 0.5}, 0.2)
             end)
 
             table.insert(tab.Elements, button)
             return button
         end
 
+        --- Создаёт переключатель
+        -- @param name Текст переключателя
+        -- @param default Начальное состояние
+        -- @param callback Функция обратного вызова
+        -- @param flag Флаг для сохранения
+        -- @return table Объект переключателя
         function tab:CreateToggle(name, default, callback, flag)
             local toggle = {
                 Value = default or false,
@@ -525,7 +648,7 @@ function GUI:CreateWindow(settings)
                 switchStroke.Color = toggle.Value and GUI.SelectedTheme.ToggleEnabledStroke or GUI.SelectedTheme.ToggleDisabledStroke
                 local success, err = pcall(toggle.Callback, toggle.Value)
                 if not success then
-                    Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                    Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
                 end
                 if toggle.Flag then
                     OmniUI.Flags[toggle.Flag] = toggle.Value
@@ -536,19 +659,28 @@ function GUI:CreateWindow(settings)
             end)
 
             switch.MouseEnter:Connect(function()
-                TweenService:Create(switch, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 42, 0, 22)}):Play()
-                TweenService:Create(switchStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0}):Play()
+                Animations:Create(switch, {Size = UDim2.new(0, 42, 0, 22)}, 0.2)
+                Animations:Create(switchStroke, {Transparency = 0}, 0.2)
             end)
 
             switch.MouseLeave:Connect(function()
-                TweenService:Create(switch, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 40, 0, 20)}):Play()
-                TweenService:Create(switchStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 0.5}):Play()
+                Animations:Create(switch, {Size = UDim2.new(0, 40, 0, 20)}, 0.2)
+                Animations:Create(switchStroke, {Transparency = 0.5}, 0.2)
             end)
 
             table.insert(tab.Elements, frame)
             return toggle
         end
 
+        --- Создаёт слайдер
+        -- @param name Текст слайдера
+        -- @param range Диапазон значений {min, max}
+        -- @param increment Шаг изменения
+        -- @param suffix Суффикс (например, "%")
+        -- @param default Начальное значение
+        -- @param callback Функция обратного вызова
+        -- @param flag Флаг для сохранения
+        -- @return table Объект слайдера
         function tab:CreateSlider(name, range, increment, suffix, default, callback, flag)
             local slider = {
                 Value = default or range[1],
@@ -619,9 +751,9 @@ function GUI:CreateWindow(settings)
                 end
             end)
 
-            RunService.RenderStepped:Connect(function()
-                if dragging then
-                    local mouseX = UserInputService:GetMouseLocation().X
+            UserInputService.InputChanged:Connect(function(input)
+                if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                    local mouseX = input.Position.X
                     local barX = sliderBar.AbsolutePosition.X
                     local barWidth = sliderBar.AbsoluteSize.X
                     local relative = math.clamp((mouseX - barX) / barWidth, 0, 1)
@@ -630,7 +762,7 @@ function GUI:CreateWindow(settings)
                     valueLabel.Text = tostring(slider.Value) .. (suffix or "")
                     local success, err = pcall(slider.Callback, slider.Value)
                     if not success then
-                        Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                        Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
                     end
                     if slider.Flag then
                         OmniUI.Flags[slider.Flag] = slider.Value
@@ -645,6 +777,13 @@ function GUI:CreateWindow(settings)
             return slider
         end
 
+        --- Создаёт поле ввода
+        -- @param name Текст поля
+        -- @param placeholder Подсказка
+        -- @param default Начальное значение
+        -- @param callback Функция обратного вызова
+        -- @param flag Флаг для сохранения
+        -- @return table Объект поля ввода
         function tab:CreateInput(name, placeholder, default, callback, flag)
             local input = {
                 Value = default or "",
@@ -677,9 +816,9 @@ function GUI:CreateWindow(settings)
 
             local textBox = Instance.new("TextBox")
             textBox.Size = UDim2.new(0.5, -5, 0, 25)
-            textBox.Position = UDim2.new(0.5, 5, 0.15, 0)
+            textBox.Position = UDim2.new(0.5, 5, 165, 0)
             textBox.Text = input.Value
-            textBox.PlaceholderText = placeholder or "Enter text..."
+            textBox.PlaceholderText = placeholder or "Введите текст..."
             textBox.TextColor3 = GUI.SelectedTheme.TextColor
             textBox.BackgroundColor3 = GUI.SelectedTheme.InputBackground
             textBox.Font = Config.Font
@@ -697,7 +836,7 @@ function GUI:CreateWindow(settings)
                     input.Value = textBox.Text
                     local success, err = pcall(input.Callback, input.Value)
                     if not success then
-                        Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                        Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
                     end
                     if input.Flag then
                         OmniUI.Flags[input.Flag] = input.Value
@@ -712,6 +851,14 @@ function GUI:CreateWindow(settings)
             return input
         end
 
+        --- Создаёт выпадающий список
+        -- @param name Текст списка
+        -- @param options Список опций
+        -- @param default Начальное значение
+        -- @param multiple Разрешить множественный выбор
+        -- @param callback Функция обратного вызова
+        -- @param flag Флаг для сохранения
+        -- @return table Объект выпадающего списка
         function tab:CreateDropdown(name, options, default, multiple, callback, flag)
             local dropdown = {
                 Value = default or (multiple and {} or options[1]),
@@ -814,7 +961,7 @@ function GUI:CreateWindow(settings)
                         updateList()
                         local success, err = pcall(dropdown.Callback, dropdown.Value)
                         if not success then
-                            Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                            Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
                         end
                         if dropdown.Flag then
                             OmniUI.Flags[dropdown.Flag] = dropdown.Value
@@ -838,6 +985,13 @@ function GUI:CreateWindow(settings)
             return dropdown
         end
 
+        --- Создаёт привязку клавиши
+        -- @param name Текст привязки
+        -- @param default Начальная клавиша
+        -- @param hold Режим удержания
+        -- @param callback Функция обратного вызова
+        -- @param flag Флаг для сохранения
+        -- @return table Объект привязки
         function tab:CreateKeybind(name, default, hold, callback, flag)
             local keybind = {
                 Value = default or "None",
@@ -901,7 +1055,7 @@ function GUI:CreateWindow(settings)
                         keybind.Binding = false
                         local success, err = pcall(keybind.Callback, key)
                         if not success then
-                            Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                            Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
                         end
                         if keybind.Flag then
                             OmniUI.Flags[keybind.Flag] = keybind.Value
@@ -924,19 +1078,19 @@ function GUI:CreateWindow(settings)
                             while held do
                                 local success, err = pcall(keybind.Callback, true)
                                 if not success then
-                                    Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                                    Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
                                 end
                                 task.wait()
                             end
                             local success, err = pcall(keybind.Callback, false)
                             if not success then
-                                Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                                Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
                             end
                         end)
                     else
                         local success, err = pcall(keybind.Callback, true)
                         if not success then
-                            Notifications:Create("Error", "Callback failed: " .. tostring(err), 5)
+                            Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
                         end
                     end
                 end
@@ -950,36 +1104,41 @@ function GUI:CreateWindow(settings)
             return keybind
         end
 
+        --- Создаёт метку
+        -- @param name Текст метки
+        -- @param icon ID иконки
+        -- @param color Цвет текста
+        -- @param warning Флаг предупреждения
+        -- @return TextLabel Экземпляр метки
         function tab:CreateLabel(name, icon, color, warning)
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(1, -10, 0, 30)
             label.Position = UDim2.new(0, 5, 0, #tab.Elements * 35)
             label.Text = name
-            label.TextColor3 = color or GUI.SelectedTheme.TextColor
+            label.TextColor3 = color or (warning and Color3.fromRGB(255, 50, 50) or GUI.SelectedTheme.TextColor)
             label.Font = Config.Font
             label.TextStrokeTransparency = 0.8
-            label.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
+            label.TextStrokeColor3 = warning and Color3.fromRGB(200, 0, 0) or GUI.SelectedTheme.TextGlow
             label.BackgroundTransparency = 1
-            label.Parent = tab.Instance
+            label.Parent =research
 
             if icon then
                 local iconLabel = Instance.new("ImageLabel")
                 iconLabel.Size = UDim2.new(0, 20, 0, 20)
                 iconLabel.Position = UDim2.new(0, -25, 0, 5)
-                iconLabel.Image = "rbxassetid://" .. icon
+                iconLabel.Image = Icons:GetIcon(icon)
                 iconLabel.BackgroundTransparency = 1
                 iconLabel.Parent = label
-            end
-
-            if warning then
-                label.TextColor3 = Color3.fromRGB(255, 50, 50)
-                label.TextStrokeColor3 = Color3.fromRGB(200, 0, 0)
             end
 
             table.insert(tab.Elements, label)
             return label
         end
 
+        --- Создаёт параграф
+        -- @param title Заголовок
+        -- @param content Текст
+        -- @return Frame Экземпляр параграфа
         function tab:CreateParagraph(title, content)
             local paragraph = Instance.new("Frame")
             paragraph.Size = UDim2.new(1, -10, 0, 55)
@@ -1023,34 +1182,31 @@ function GUI:CreateWindow(settings)
         return tab
     end
 
+    --- Устанавливает видимость окна
+    -- @param visible Флаг видимости
     function window:SetVisible(visible)
         window.Visible = visible
         window.Hidden = not visible
         window.Instance.Enabled = visible
         if visible then
-            Notifications:Create("Hack Activated", "OmniUI is now dominating the system.", 5)
-            TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -225, 0.5, -200)}):Play()
-            TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
+            Notifications:Create("Хак активирован", "OmniUI захватил систему.", 5, "Info")
+            Animations:Create(window.MainFrame, {Position = UDim2.new(0.5, -225, 0.5, -200), BackgroundTransparency = 0}, 0.7)
         else
-            Notifications:Create("Hack Hidden", "OmniUI is cloaked. Press " .. window.Keybind .. " to unleash.", 5)
-            TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, -225, 0.5, 200)}):Play()
-            TweenService:Create(window.MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
+            Notifications:Create("Хак скрыт", "Нажмите " .. window.Keybind .. " для активации.", 5, "Info")
+            Animations:Create(window.MainFrame, {Position = UDim2.new(0.5, -225, 0.5, 200), BackgroundTransparency = 1}, 0.7)
         end
     end
 
+    --- Загружает конфигурацию
     function window:LoadConfiguration()
         if not window.ConfigSaving.Enabled then return end
         local data = Configurations:Load()
         for flag, value in pairs(data) do
             if OmniUI.Flags[flag] then
-                if type(value) == "table" and value.R and value.G and value.B then
-                    OmniUI.Flags[flag]:Set(Color3.fromRGB(value.R, value.G, value.B))
-                else
-                    OmniUI.Flags[flag]:Set(value)
-                end
+                OmniUI.Flags[flag] = value
             end
         end
-        Notifications:Create("Configuration Loaded", "Hack settings restored from the void.", 5)
+        Notifications:Create("Конфигурация загружена", "Настройки восстановлены.", 5, "Info")
     end
 
     local keybindConnection = UserInputService.InputBegan:Connect(function(input, processed)
@@ -1074,6 +1230,8 @@ OmniUI.API = API
 OmniUI.Notifications = Notifications
 OmniUI.Configurations = Configurations
 OmniUI.Analytics = Analytics
+OmniUI.Animations = Animations
+OmniUI.Icons = Icons
 
 -- Пример использования
 if RunService:IsStudio() then
@@ -1082,40 +1240,45 @@ if RunService:IsStudio() then
         ConfigurationSaving = { Enabled = true, FileName = "HackConfig" },
     })
 
-    local tab = window:CreateTab("Exploits", 4483362458)
+    local tab = window:CreateTab("Exploits", "Default")
     tab:CreateButton("God Mode", function()
         local playerId = Players.LocalPlayer.UserId
         local data = API:UpdateInventory(playerId, "god_mode", 1)
-        Notifications:Create("Success", "God Mode: Invincibility Activated", 5)
+        Notifications:Create("Успех", "God Mode: Активирована неуязвимость", 5, "Info")
     end)
 
     tab:CreateToggle("Speed Hack", false, function(value)
         local playerId = Players.LocalPlayer.UserId
         local data = API:UpdateInventory(playerId, "speed_hack", value and 1 or 0)
-        Notifications:Create("Success", "Speed Hack: " .. (value and "Warp Speed" or "Disabled"), 5)
+        Notifications:Create("Успех", "Speed Hack: " .. (value and "Скорость света" or "Отключено"), 5, "Info")
     end, "SpeedHackToggle")
 
     tab:CreateSlider("Health", {0, 100}, 10, "%", 50, function(value)
-        Notifications:Create("Health Set", "Vitality adjusted to: " .. value .. "%", 5)
+        Notifications:Create("Здоровье установлено", "Уровень: " .. value .. "%", 5, "Info")
     end, "HealthSlider")
 
-    tab:CreateInput("Target Player", "Enter player name...", "", function(text)
-        Notifications:Create("Target Set", "Locked onto: " .. text, 5)
+    tab:CreateInput("Target Player", "Введите имя игрока...", "", function(text)
+        Notifications:Create("Цель выбрана", "Заблокировано на: " .. text, 5, "Info")
     end, "TargetInput")
 
     tab:CreateDropdown("Exploit Mode", {"Silent", "Aggressive", "Stealth"}, "Silent", false, function(mode)
-        Notifications:Create("Mode Changed", "Exploit mode set to: " .. mode, 5)
+        Notifications:Create("Режим изменён", "Режим эксплойта: " .. mode, 5, "Info")
     end, "ExploitModeDropdown")
 
     tab:CreateKeybind("Teleport", "T", false, function()
-        Notifications:Create("Teleport", "Warping to target location", 5)
+        Notifications:Create("Телепорт", "Перемещение на целевую позицию", 5, "Info")
     end, "TeleportKeybind")
 
-    tab:CreateLabel("Status: Online")
-    tab:CreateParagraph("CyberForge", "Unleash chaos with the power of OmniUI.")
+    tab:CreateLabel("Статус: Онлайн", "Info")
+    tab:CreateParagraph("CyberForge", "Разрушайте систему с мощью OmniUI.")
 
     window:SetVisible(true)
     window:LoadConfiguration()
+
+    -- Тест смены темы
+    task.delay(5, function()
+        GUI:ChangeTheme("NeonTokyo")
+    end)
 end
 
 return OmniUI

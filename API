@@ -1,11 +1,7 @@
-
--- OmniUI API: Модульная библиотека для создания стильных интерфейсов в Roblox
--- Версия: 1.2.1
--- Лицензия: MIT
--- Автор: Анонимный разработчик
+-- OmniUI API 1.0.2
 
 local OmniUI = {
-    Version = "1.2.1",
+    Version = "1.2.2",
     Build = "OMNI-CYBERFORGE-V2",
     Flags = {},
     Themes = {
@@ -73,6 +69,7 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
+local PlayerGui = Players.LocalPlayer and Players.LocalPlayer:WaitForChild("PlayerGui")
 
 -- Конфигурация
 local Config = {
@@ -121,21 +118,34 @@ function Animations:Pulse(stroke, minTransparency, maxTransparency, duration)
     return tween
 end
 
--- Модуль API (мок для тестирования)
+-- Модуль API
 local API = {}
+
+--- Проверяет, включены ли HTTP-запросы
+-- @return boolean
+local function isHttpEnabled()
+    local success, enabled = pcall(function()
+        return HttpService:GetHttpEnabled()
+    end)
+    return success and enabled
+end
 
 --- Получает данные игрока
 -- @param playerId ID игрока
 -- @return table|nil Данные игрока или nil при ошибке
 function API:GetPlayerData(playerId)
-    local success, response = pcall(function()
+    if not isHttpEnabled() then
+        warn("API Error: HTTP-запросы отключены в настройках игры")
+        return nil
+    end
+    local success, result = pcall(function()
         return HttpService:GetAsync(Config.API_URL .. "/player/" .. tostring(playerId))
     end)
     if success then
-        return HttpService:JSONDecode(response)
+        return HttpService:JSONDecode(result)
     else
-        warn("API Error: " .. tostring(response))
-        return { mock = true, playerId = playerId, name = "MockPlayer" } -- Мок для тестирования
+        warn("API Error: Не удалось получить данные игрока: " .. tostring(result))
+        return nil
     end
 end
 
@@ -145,7 +155,11 @@ end
 -- @param quantity Количество
 -- @return table|nil Результат или nil при ошибке
 function API:UpdateInventory(playerId, itemId, quantity)
-    local success, response = pcall(function()
+    if not isHttpEnabled() then
+        warn("API Error: HTTP-запросы отключены в настройках игры")
+        return nil
+    end
+    local success, result = pcall(function()
         return HttpService:PostAsync(
             Config.API_URL .. "/inventory/update",
             HttpService:JSONEncode({ playerId = playerId, itemId = itemId, quantity = quantity }),
@@ -153,10 +167,10 @@ function API:UpdateInventory(playerId, itemId, quantity)
         )
     end)
     if success then
-        return HttpService:JSONDecode(response)
+        return HttpService:JSONDecode(result)
     else
-        warn("API Error: " .. tostring(response))
-        return { mock = true, success = true } -- Мок для тестирования
+        warn("API Error: Не удалось обновить инвентарь: " .. tostring(result))
+        return nil
     end
 end
 
@@ -245,7 +259,8 @@ function Notifications:Create(title, content, duration, type)
     -- Пульсирующий эффект
     local pulse = Animations:Pulse(uiStroke, 0, 0.3, 1)
 
-    task.delay(duration or 5, function()
+    task.spawn(function()
+        task.wait(duration or 5)
         pulse:Cancel()
         Animations:Create(notification, {Position = UDim2.new(1, 0, 1, -100 - (#CoreGui:GetChildren() * 90)), BackgroundTransparency = 1}, 0.5)
         Animations:Create(uiStroke, {Transparency = 1}, 0.5)
@@ -303,8 +318,12 @@ local Analytics = {}
 --- Отправляет отчёт аналитики
 function Analytics:SendReport()
     if not Config.AnalyticsEnabled then return end
+    if not isHttpEnabled() then
+        warn("Analytics Error: HTTP-запросы отключены")
+        return
+    end
     task.spawn(function()
-        local success, response = pcall(function()
+        local success, err = pcall(function()
             return HttpService:PostAsync(
                 "https://mock.analytics/report",
                 HttpService:JSONEncode({ build = OmniUI.Build, version = OmniUI.Version, userId = Players.LocalPlayer.UserId }),
@@ -312,7 +331,7 @@ function Analytics:SendReport()
             )
         end)
         if not success then
-            warn("Analytics Error: " .. tostring(response))
+            warn("Analytics Error: " .. tostring(err))
         end
     end)
 end
@@ -332,18 +351,20 @@ function GUI:ChangeTheme(theme)
         GUI.SelectedTheme = theme
     end
     for _, window in pairs(GUI.Windows) do
-        window.MainFrame.BackgroundColor3 = GUI.SelectedTheme.Background
-        window.MainFrame.UIGradient.Color = ColorSequence.new(GUI.SelectedTheme.BackgroundGradient)
-        window.Topbar.BackgroundColor3 = GUI.SelectedTheme.Topbar
-        window.Title.TextColor3 = GUI.SelectedTheme.TextColor
-        window.Title.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
-        for _, tab in ipairs(window.Tabs) do
-            tab.Instance.BackgroundColor3 = GUI.SelectedTheme.Background
-            for _, element in ipairs(tab.Elements) do
-                if element:IsA("Frame") then
-                    element.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
-                    if element.UIStroke then
-                        element.UIStroke.Color = GUI.SelectedTheme.ElementStroke
+        if window and window.MainFrame and window.Topbar and window.Title then
+            window.MainFrame.BackgroundColor3 = GUI.SelectedTheme.Background
+            window.MainFrame.UIGradient.Color = ColorSequence.new(GUI.SelectedTheme.BackgroundGradient)
+            window.Topbar.BackgroundColor3 = GUI.SelectedTheme.Topbar
+            window.Title.TextColor3 = GUI.SelectedTheme.TextColor
+            window.Title.TextStrokeColor3 = GUI.SelectedTheme.TextGlow
+            for _, tab in ipairs(window.Tabs) do
+                tab.Instance.BackgroundColor3 = GUI.SelectedTheme.Background
+                for _, element in ipairs(tab.Elements) do
+                    if element:IsA("Frame") then
+                        element.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+                        if element.UIStroke then
+                            element.UIStroke.Color = GUI.SelectedTheme.ElementStroke
+                        end
                     end
                 end
             end
@@ -356,12 +377,24 @@ end
 -- @param settings Таблица с настройками окна
 -- @return table Объект окна
 function GUI:CreateWindow(settings)
+    local guiParent = CoreGui
+    local success, canUseCoreGui = pcall(function()
+        local testGui = Instance.new("ScreenGui")
+        testGui.Parent = CoreGui
+        testGui:Destroy()
+        return true
+    end)
+    if not success or not canUseCoreGui then
+        warn("CoreGui недоступен, использование PlayerGui")
+        guiParent = PlayerGui or error("PlayerGui недоступен")
+    end
+
     local window = {
         Name = settings.Name or "OmniUI Hack",
         Tabs = {},
-        Visible = true, -- Изменено: окно видно по умолчанию
+        Visible = true,
         Minimised = false,
-        Hidden = false, -- Изменено: окно не скрыто по умолчанию
+        Hidden = false,
         Instance = Instance.new("ScreenGui"),
         MainFrame = Instance.new("Frame"),
         Topbar = Instance.new("Frame"),
@@ -372,16 +405,18 @@ function GUI:CreateWindow(settings)
     }
 
     window.Instance.Name = "OmniUI_" .. window.Name
-    window.Instance.Parent = CoreGui
+    window.Instance.Parent = guiParent
     window.Instance.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    window.Instance.DisplayOrder = 100
-    window.Instance.Enabled = true -- Изменено: окно активно по умолчанию
+    window.Instance.DisplayOrder = 1000
+    window.Instance.Enabled = true
+    window.Instance.ResetOnSpawn = false
 
     window.MainFrame.Size = UDim2.new(0, 450, 0, 400)
     window.MainFrame.Position = UDim2.new(0.5, -225, 0.5, -200)
     window.MainFrame.BackgroundColor3 = GUI.SelectedTheme.Background
-    window.MainFrame.BackgroundTransparency = 0 -- Изменено: без прозрачности по умолчанию
+    window.MainFrame.BackgroundTransparency = 0
     window.MainFrame.Parent = window.Instance
+    window.MainFrame.ClipsDescendants = true
 
     local uiGradient = Instance.new("UIGradient")
     uiGradient.Color = ColorSequence.new(GUI.SelectedTheme.BackgroundGradient)
@@ -461,7 +496,7 @@ function GUI:CreateWindow(settings)
         end
     end)
 
-    dragInteract.Input Ended:Connect(function(input)
+    dragInteract.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
@@ -777,7 +812,7 @@ function GUI:CreateWindow(settings)
 
         --- Создаёт поле ввода
         -- @param name Текст поля
-        -- @param placeholderJITПодсказка
+        -- @param placeholder Подсказка
         -- @param default Начальное значение
         -- @param callback Функция обратного вызова
         -- @param flag Флаг для сохранения
@@ -1043,8 +1078,7 @@ function GUI:CreateWindow(settings)
                 keybindButton.Text = "..."
             end)
 
-            local connection
-            connection = UserInputService.InputBegan:Connect(function(input, processed)
+            local connection = UserInputService.InputBegan:Connect(function(input, processed)
                 if keybind.Binding and not processed then
                     local key = input.KeyCode.Name
                     if key ~= "Unknown" then
@@ -1217,8 +1251,8 @@ function GUI:CreateWindow(settings)
         keybindConnection:Disconnect()
     end)
 
-    -- Показ уведомления при создании окна, так как оно сразу видно
     Notifications:Create("Хак активирован", "OmniUI захватил систему.", 5, "Info")
+    print("[OmniUI] Окно создано: " .. window.Name .. ", Parent: " .. window.Instance.Parent.Name)
 
     GUI.Windows[window.Name] = window
     Analytics:SendReport()
@@ -1276,7 +1310,8 @@ if RunService:IsStudio() then
     window:LoadConfiguration()
 
     -- Тест смены темы
-    task.delay(5, function()
+    task.spawn(function()
+        task.wait(5)
         GUI:ChangeTheme("NeonTokyo")
     end)
 end

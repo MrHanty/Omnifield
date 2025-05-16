@@ -1,6 +1,3 @@
--- OmniUI API
-
-
 local OmniUI = {
     Version = "1.0.1",
     Build = "OMNI-CYBERFORGE-V2",
@@ -8,7 +5,7 @@ local OmniUI = {
     Themes = {
         CyberForge = {
             TextColor = Color3.fromRGB(255, 255, 255),
-            TextGlow = Color3.fromRGB(0, 255, 149), -- Неоново-зелёный
+            TextGlow = Color3.fromRGB(0, 255, 149),
             Background = Color3.fromRGB(10, 10, 15),
             BackgroundGradient = {Color3.fromRGB(10, 10, 15), Color3.fromRGB(20, 20, 30)},
             Topbar = Color3.fromRGB(15, 15, 20),
@@ -35,7 +32,7 @@ local OmniUI = {
         },
         NeonTokyo = {
             TextColor = Color3.fromRGB(255, 255, 255),
-            TextGlow = Color3.fromRGB(255, 105, 180), -- Неоново-розовый
+            TextGlow = Color3.fromRGB(255, 105, 180),
             Background = Color3.fromRGB(15, 15, 20),
             BackgroundGradient = {Color3.fromRGB(15, 15, 20), Color3.fromRGB(25, 25, 35)},
             Topbar = Color3.fromRGB(20, 20, 25),
@@ -70,28 +67,62 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
-local PlayerGui = Players.LocalPlayer and Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- Безопасное получение PlayerGui
+local function getPlayerGui()
+    local localPlayer = Players.LocalPlayer
+    if localPlayer then
+        local playerGui = localPlayer:WaitForChild("PlayerGui", 5)
+        if playerGui then
+            return playerGui
+        else
+            debugLog("PlayerGui не найден в течение 5 секунд", "error")
+        end
+    else
+        debugLog("LocalPlayer не найден", "error")
+    end
+    return nil
+end
 
 -- Конфигурация
 local Config = {
     Folder = "OmniUI",
     ConfigFile = "settings.json",
-    API_URL = "https://mock.api/roblox", -- Мок для тестирования
+    API_URL = "https://mock.api/roblox",
     AnalyticsEnabled = true,
     DefaultKeybind = "K",
-    Font = Enum.Font.SourceSans, -- Исправлен шрифт
+    Font = Enum.Font.SourceSans,
+    Debug = true,
 }
+
+-- Утилита для отладки
+local function debugLog(message, level)
+    if Config.Debug then
+        local prefix = level == "error" and "[OmniUI ERROR]" or "[OmniUI DEBUG]"
+        local success, _ = pcall(function()
+            print(prefix .. " " .. message)
+        end)
+        if not success then
+            -- Запасной вариант, если print недоступен
+            local output = Instance.new("StringValue")
+            output.Value = prefix .. " " .. message
+            output.Parent = game:GetService("LogService")
+            output:Destroy()
+        end
+    end
+end
+
+-- Проверка наличия функций isfolder/writefile
+local function isFileSystemSupported()
+    local success, _ = pcall(function()
+        return isfolder and writefile and isfile and readfile
+    end)
+    return success
+end
 
 -- Модуль анимаций
 local Animations = {}
 
---- Создаёт анимацию для объекта
--- @param instance Экземпляр Roblox для анимации
--- @param properties Таблица свойств для анимации
--- @param duration Длительность анимации (в секундах)
--- @param easingStyle Стиль анимации (по умолчанию Quad)
--- @param easingDirection Направление анимации (по умолчанию Out)
--- @return Tween
 function Animations:Create(instance, properties, duration, easingStyle, easingDirection)
     local tweenInfo = TweenInfo.new(
         duration or 0.3,
@@ -100,15 +131,10 @@ function Animations:Create(instance, properties, duration, easingStyle, easingDi
     )
     local tween = TweenService:Create(instance, tweenInfo, properties)
     tween:Play()
+    debugLog("Анимация создана для " .. instance.Name .. ": " .. HttpService:JSONEncode(properties), "info")
     return tween
 end
 
---- Создаёт пульсирующий эффект для UIStroke
--- @param stroke Экземпляр UIStroke
--- @param minTransparency Минимальная прозрачность
--- @param maxTransparency Максимальная прозрачность
--- @param duration Длительность цикла
--- @return Tween
 function Animations:Pulse(stroke, minTransparency, maxTransparency, duration)
     local tween = TweenService:Create(
         stroke,
@@ -116,48 +142,43 @@ function Animations:Pulse(stroke, minTransparency, maxTransparency, duration)
         { Transparency = maxTransparency }
     )
     tween:Play()
+    debugLog("Пульсирующая анимация создана для UIStroke", "info")
     return tween
 end
 
 -- Модуль API
 local API = {}
 
---- Проверяет, включены ли HTTP-запросы
--- @return boolean
 local function isHttpEnabled()
     local success, enabled = pcall(function()
         return HttpService:GetHttpEnabled()
     end)
+    if not success then
+        debugLog("Ошибка проверки HTTP: " .. tostring(enabled), "error")
+    end
     return success and enabled
 end
 
---- Получает данные игрока
--- @param playerId ID игрока
--- @return table|nil Данные игрока или nil при ошибке
 function API:GetPlayerData(playerId)
     if not isHttpEnabled() then
-        warn("API Error: HTTP-запросы отключены в настройках игры")
+        debugLog("HTTP-запросы отключены в настройках игры", "error")
         return nil
     end
     local success, result = pcall(function()
         return HttpService:GetAsync(Config.API_URL .. "/player/" .. tostring(playerId))
     end)
     if success then
+        debugLog("Данные игрока получены для ID: " .. playerId, "info")
         return HttpService:JSONDecode(result)
     else
-        warn("API Error: Не удалось получить данные игрока: " .. tostring(result))
+        debugLog("Не удалось получить данные игрока: " .. tostring(result), "error")
         return nil
     end
 end
 
---- Обновляет инвентарь игрока
--- @param playerId ID игрока
--- @param itemId ID предмета
--- @param quantity Количество
--- @return table|nil Результат или nil при ошибке
 function API:UpdateInventory(playerId, itemId, quantity)
     if not isHttpEnabled() then
-        warn("API Error: HTTP-запросы отключены в настройках игры")
+        debugLog("HTTP-запросы отключены в настройках игры", "error")
         return nil
     end
     local success, result = pcall(function()
@@ -168,9 +189,10 @@ function API:UpdateInventory(playerId, itemId, quantity)
         )
     end)
     if success then
+        debugLog("Инвентарь обновлён для ID: " .. playerId, "info")
         return HttpService:JSONDecode(result)
     else
-        warn("API Error: Не удалось обновить инвентарь: " .. tostring(result))
+        debugLog("Не удалось обновить инвентарь: " .. tostring(result), "error")
         return nil
     end
 end
@@ -178,137 +200,66 @@ end
 -- Модуль иконок
 local Icons = {
     Default = "rbxassetid://4483362458",
-    Warning = "rbxassetid://1234567890", -- Заменить на реальный ID
-    Error = "rbxassetid://0987654321",   -- Заменить на реальный ID
-    Info = "rbxassetid://1122334455",    -- Заменить на реальный ID
+    Warning = "rbxassetid://1234567890",
+    Error = "rbxassetid://0987654321",
+    Info = "rbxassetid://1122334455",
 }
 
---- Получает иконку по имени
--- @param name Имя иконки
--- @return string Roblox Asset ID
 function Icons:GetIcon(name)
-    return Icons[name] or Icons.Default
-end
-
--- Модуль уведомлений
-local Notifications = {}
-
---- Создаёт уведомление
--- @param title Заголовок уведомления
--- @param content Текст уведомления
--- @param duration Длительность (в секундах)
--- @param type Тип уведомления: "Info", "Warning", "Error"
--- @return Frame Экземпляр уведомления
-function Notifications:Create(title, content, duration, type)
-    local notification = Instance.new("Frame")
-    notification.Size = UDim2.new(0, 300, 0, 80)
-    notification.Position = UDim2.new(1, -320, 1, -100 - (#CoreGui:GetChildren() * 90))
-    notification.BackgroundColor3 = OmniUI.Themes.CyberForge.NotificationBackground
-    notification.BackgroundTransparency = 0.3
-    notification.Parent = CoreGui
-
-    local uiGradient = Instance.new("UIGradient")
-    uiGradient.Color = ColorSequence.new(OmniUI.Themes.CyberForge.BackgroundGradient)
-    uiGradient.Parent = notification
-
-    local uiStroke = Instance.new("UIStroke")
-    uiStroke.Color = OmniUI.Themes.CyberForge.NotificationStroke
-    uiStroke.Thickness = 2
-    uiStroke.Transparency = 0.5
-    uiStroke.Parent = notification
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -10, 0, 20)
-    titleLabel.Position = UDim2.new(0, 5, 0, 5)
-    titleLabel.Text = title
-    titleLabel.TextColor3 = OmniUI.Themes.CyberForge.TextColor
-    titleLabel.TextTransparency = 1
-    titleLabel.Font = Config.Font
-    titleLabel.TextStrokeTransparency = 0.8
-    titleLabel.TextStrokeColor3 = OmniUI.Themes.CyberForge.TextGlow
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Parent = notification
-
-    local contentLabel = Instance.new("TextLabel")
-    contentLabel.Size = UDim2.new(1, -10, 0, 50)
-    contentLabel.Position = UDim2.new(0, 5, 0, 25)
-    contentLabel.Text = content
-    contentLabel.TextColor3 = OmniUI.Themes.CyberForge.TextColor
-    contentLabel.TextTransparency = 1
-    contentLabel.Font = Config.Font
-    contentLabel.TextWrapped = true
-    contentLabel.BackgroundTransparency = 1
-    contentLabel.Parent = notification
-
-    -- Иконка в зависимости от типа
-    local iconImage = Icons:GetIcon(type or "Info")
-    local icon = Instance.new("ImageLabel")
-    icon.Size = UDim2.new(0, 32, 0, 32)
-    icon.Position = UDim2.new(0, 5, 0, 5)
-    icon.Image = iconImage
-    icon.BackgroundTransparency = 1
-    icon.ImageTransparency = 1
-    icon.Parent = notification
-
-    -- Анимация появления
-    Animations:Create(notification, {Position = UDim2.new(1, -320, 1, -100 - (#CoreGui:GetChildren() * 90)), BackgroundTransparency = 0.1}, 0.5)
-    Animations:Create(uiStroke, {Transparency = 0}, 0.5)
-    Animations:Create(titleLabel, {TextTransparency = 0}, 0.5)
-    Animations:Create(contentLabel, {TextTransparency = 0.2}, 0.5)
-    Animations:Create(icon, {ImageTransparency = 0}, 0.5)
-
-    -- Пульсирующий эффект
-    local pulse = Animations:Pulse(uiStroke, 0, 0.3, 1)
-
-    task.spawn(function()
-        task.wait(duration or 5)
-        pulse:Cancel()
-        Animations:Create(notification, {Position = UDim2.new(1, 0, 1, -100 - (#CoreGui:GetChildren() * 90)), BackgroundTransparency = 1}, 0.5)
-        Animations:Create(uiStroke, {Transparency = 1}, 0.5)
-        Animations:Create(titleLabel, {TextTransparency = 1}, 0.5)
-        Animations:Create(contentLabel, {TextTransparency = 1}, 0.5)
-        Animations:Create(icon, {ImageTransparency = 1}, 0.5)
-        task.wait(0.5)
-        notification:Destroy()
-    end)
-
-    return notification
+    local icon = Icons[name] or Icons.Default
+    debugLog("Иконка запрошена: " .. name .. ", возвращена: " .. icon, "info")
+    return icon
 end
 
 -- Модуль конфигураций
 local Configurations = {}
 
---- Сохраняет конфигурацию
--- @param data Данные для сохранения
 function Configurations:Save(data)
-    if not isfolder or not writefile then
-        Notifications:Create("Ошибка", "Файловая система не поддерживается вашим исполнителем.", 5, "Error")
+    if not isFileSystemSupported() then
+        debugLog("Файловая система не поддерживается", "error")
         return
     end
-    if not isfolder(Config.Folder) then
-        makefolder(Config.Folder)
+    local successFolder, _ = pcall(function()
+        if not isfolder(Config.Folder) then
+            makefolder(Config.Folder)
+            debugLog("Создана папка: " .. Config.Folder, "info")
+        end
+        return true
+    end)
+    if not successFolder then
+        debugLog("Ошибка создания папки: " .. Config.Folder, "error")
+        return
     end
     local success, err = pcall(function()
         writefile(Config.Folder .. "/" .. Config.ConfigFile, HttpService:JSONEncode(data))
     end)
-    if not success then
-        Notifications:Create("Ошибка", "Не удалось сохранить конфигурацию: " .. tostring(err), 5, "Error")
+    if success then
+        debugLog("Конфигурация сохранена", "info")
+    else
+        debugLog("Ошибка сохранения конфигурации: " .. tostring(err), "error")
     end
 end
 
---- Загружает конфигурацию
--- @return table Загруженные данные или пустая таблица при ошибке
 function Configurations:Load()
-    if not isfile or not isfolder(Config.Folder) or not isfile(Config.Folder .. "/" .. Config.ConfigFile) then
+    if not isFileSystemSupported() then
+        debugLog("Файловая система не поддерживается", "error")
+        return {}
+    end
+    local success, exists = pcall(function()
+        return isfolder(Config.Folder) and isfile(Config.Folder .. "/" .. Config.ConfigFile)
+    end)
+    if not success or not exists then
+        debugLog("Конфигурация не найдена", "info")
         return {}
     end
     local success, data = pcall(function()
         return HttpService:JSONDecode(readfile(Config.Folder .. "/" .. Config.ConfigFile))
     end)
     if success then
+        debugLog("Конфигурация загружена", "info")
         return data
     else
-        Notifications:Create("Ошибка", "Не удалось загрузить конфигурацию: " .. tostring(data), 5, "Error")
+        debugLog("Ошибка загрузки конфигурации: " .. tostring(data), "error")
         return {}
     end
 end
@@ -316,23 +267,27 @@ end
 -- Модуль аналитики
 local Analytics = {}
 
---- Отправляет отчёт аналитики
 function Analytics:SendReport()
-    if not Config.AnalyticsEnabled then return end
+    if not Config.AnalyticsEnabled then
+        debugLog("Аналитика отключена", "info")
+        return
+    end
     if not isHttpEnabled() then
-        warn("Analytics Error: HTTP-запросы отключены")
+        debugLog("HTTP-запросы отключены для аналитики", "error")
         return
     end
     task.spawn(function()
         local success, err = pcall(function()
             return HttpService:PostAsync(
                 "https://mock.analytics/report",
-                HttpService:JSONEncode({ build = OmniUI.Build, version = OmniUI.Version, userId = Players.LocalPlayer.UserId }),
+                HttpService:JSONEncode({ build = OmniUI.Build, version = OmniUI.Version, userId = Players.LocalPlayer and Players.LocalPlayer.UserId or "Unknown" }),
                 Enum.HttpContentType.ApplicationJson
             )
         end)
-        if not success then
-            warn("Analytics Error: " .. tostring(err))
+        if success then
+            debugLog("Отчёт аналитики отправлен", "info")
+        else
+            debugLog("Ошибка отправки аналитики: " .. tostring(err), "error")
         end
     end)
 end
@@ -343,15 +298,14 @@ local GUI = {
     SelectedTheme = OmniUI.Themes.CyberForge,
 }
 
---- Меняет тему интерфейса
--- @param theme Имя темы или таблица с настройками
 function GUI:ChangeTheme(theme)
+    local themeName = type(theme) == "string" and theme or "Custom"
     if type(theme) == "string" then
         GUI.SelectedTheme = OmniUI.Themes[theme] or OmniUI.Themes.CyberForge
     elseif type(theme) == "table" then
         GUI.SelectedTheme = theme
     end
-    for _, window in pairs(GUI.Windows) do
+    for windowName, window in pairs(GUI.Windows) do
         if window and window.MainFrame and window.Topbar and window.Title then
             window.MainFrame.BackgroundColor3 = GUI.SelectedTheme.Background
             window.MainFrame.UIGradient.Color = ColorSequence.new(GUI.SelectedTheme.BackgroundGradient)
@@ -369,16 +323,14 @@ function GUI:ChangeTheme(theme)
                     end
                 end
             end
+            debugLog("Тема изменена для окна: " .. windowName .. ", новая тема: " .. themeName, "info")
         end
     end
-    Notifications:Create("Тема изменена", "Интерфейс теперь в стиле " .. (type(theme) == "string" and theme or "Custom"), 5, "Info")
 end
 
---- Создаёт новое окно
--- @param settings Таблица с настройками окна
--- @return table Объект окна
 function GUI:CreateWindow(settings)
     local guiParent = CoreGui
+    local playerGui = getPlayerGui()
     local success, canUseCoreGui = pcall(function()
         local testGui = Instance.new("ScreenGui")
         testGui.Parent = CoreGui
@@ -386,8 +338,8 @@ function GUI:CreateWindow(settings)
         return true
     end)
     if not success or not canUseCoreGui then
-        warn("CoreGui недоступен, использование PlayerGui")
-        guiParent = PlayerGui or error("PlayerGui недоступен")
+        debugLog("CoreGui недоступен, использование PlayerGui", "warning")
+        guiParent = playerGui or error("PlayerGui недоступен")
     end
 
     local window = {
@@ -400,7 +352,6 @@ function GUI:CreateWindow(settings)
         MainFrame = Instance.new("Frame"),
         Topbar = Instance.new("Frame"),
         Title = Instance.new("TextLabel"),
-        Notifications = Notifications,
         ConfigSaving = settings.ConfigurationSaving or { Enabled = false },
         Keybind = settings.Keybind or Config.DefaultKeybind,
     }
@@ -411,6 +362,7 @@ function GUI:CreateWindow(settings)
     window.Instance.DisplayOrder = 100000
     window.Instance.Enabled = true
     window.Instance.ResetOnSpawn = false
+    debugLog("ScreenGui создан: " .. window.Instance.Name .. ", Parent: " .. guiParent.Name, "info")
 
     window.MainFrame.Size = UDim2.new(0, 450, 0, 400)
     window.MainFrame.Position = UDim2.new(0.5, -225, 0.5, -200)
@@ -457,18 +409,18 @@ function GUI:CreateWindow(settings)
     closeButton.Font = Config.Font
     closeButton.Parent = window.Topbar
 
-    local minimiseButton = Instance.new("TextButton")
-    minimiseButton.Size = UDim2.new(0, 30, 0, 30)
-    minimiseButton.Position = UDim2.new(1, -75, 0, 5)
-    minimiseButton.Text = "-"
-    minimiseButton.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
-    minimiseButton.TextColor3 = GUI.SelectedTheme.TextColor
-    minimiseButton.Font = Config.Font
-    minimiseButton.Parent = window.Topbar
+    local minimizeButton = Instance.new("TextButton")
+    minimizeButton.Size = UDim2.new(0, 30, 0, 30)
+    minimizeButton.Position = UDim2.new(1, -75, 0, 5)
+    minimizeButton.Text = "-"
+    minimizeButton.BackgroundColor3 = GUI.SelectedTheme.ElementBackground
+    minimizeButton.TextColor3 = GUI.SelectedTheme.TextColor
+    minimizeButton.Font = Config.Font
+    minimizeButton.Parent = window.Topbar
 
-    -- Новая логика перетаскивания
+    -- Улучшенная логика перетаскивания
     local dragInteract = Instance.new("TextButton")
-    dragInteract.Size = UDim2.new(1, -80, 0, 40) -- Зона перетаскивания (верхняя панель, исключая кнопки)
+    dragInteract.Size = UDim2.new(1, -80, 0, 40)
     dragInteract.Position = UDim2.new(0, 0, 0, 0)
     dragInteract.BackgroundTransparency = 1
     dragInteract.Text = ""
@@ -480,27 +432,27 @@ function GUI:CreateWindow(settings)
     dragInteract.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            dragStartPos = input.Position
-            frameStartPos = window.MainFrame.AbsolutePosition
+            dragStartPos = Vector2.new(input.Position.X, input.Position.Y)
+            frameStartPos = window.MainFrame.Position
+            debugLog("Начато перетаскивание: Начальная позиция " .. tostring(dragStartPos), "info")
         end
     end)
 
     dragInteract.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
+            debugLog("Перетаскивание завершено", "info")
         end
     end)
 
-    local dragConnection
-    dragConnection = RunService.RenderStepped:Connect(function()
-        if dragging then
-            local mousePos = UserInputService:GetMouseLocation()
-            local delta = mousePos - dragStartPos
-            local newPos = frameStartPos + delta
-            window.MainFrame.Position = UDim2.new(
-                0, math.clamp(newPos.X, 0, window.Instance.AbsoluteSize.X - window.MainFrame.AbsoluteSize.X),
-                0, math.clamp(newPos.Y, 0, window.Instance.AbsoluteSize.Y - window.MainFrame.AbsoluteSize.Y)
-            )
+    local dragConnection = UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local currentPos = Vector2.new(input.Position.X, input.Position.Y)
+            local delta = currentPos - dragStartPos
+            local newX = math.clamp(frameStartPos.X.Offset + delta.X, 0, window.Instance.AbsoluteSize.X - window.MainFrame.AbsoluteSize.X)
+            local newY = math.clamp(frameStartPos.Y.Offset + delta.Y, 0, window.Instance.AbsoluteSize.Y - window.MainFrame.AbsoluteSize.Y)
+            window.MainFrame.Position = UDim2.new(0, newX, 0, newY)
+            debugLog("Перетаскивание: Новая позиция (" .. newX .. ", " .. newY .. ")", "info")
         end
     end)
 
@@ -509,18 +461,16 @@ function GUI:CreateWindow(settings)
         if dragConnection then
             dragConnection:Disconnect()
         end
+        debugLog("Окно закрыто: " .. window.Name, "info")
     end)
 
-    minimiseButton.MouseButton1Click:Connect(function()
+    minimizeButton.MouseButton1Click:Connect(function()
         window.Minimised = not window.Minimised
         local targetSize = window.Minimised and UDim2.new(0, 450, 0, 40) or UDim2.new(0, 450, 0, 400)
         Animations:Create(window.MainFrame, {Size = targetSize}, 0.3)
+        debugLog("Окно " .. (window.Minimised and "свёрнуто" or "развёрнуто") .. ": " .. window.Name, "info")
     end)
 
-    --- Создаёт вкладку
-    -- @param tabName Имя вкладки
-    -- @param icon ID иконки
-    -- @return table Объект вкладки
     function window:CreateTab(tabName, icon)
         local tab = {
             Name = tabName,
@@ -565,7 +515,7 @@ function GUI:CreateWindow(settings)
                 t.Button.BackgroundColor3 = (t == tab) and GUI.SelectedTheme.ElementBackgroundHover or GUI.SelectedTheme.ElementBackground
                 t.Button.UIStroke.Transparency = (t == tab) and 0 or 0.5
             end
-            print("[OmniUI] Вкладка активирована: " .. tabName .. ", Visible: " .. tostring(tab.Instance.Visible))
+            debugLog("Вкладка активирована: " .. tabName .. ", Visible: " .. tostring(tab.Instance.Visible), "info")
         end)
 
         tab.Button.MouseEnter:Connect(function()
@@ -587,10 +537,6 @@ function GUI:CreateWindow(settings)
             tabStroke.Transparency = 0
         end
 
-        --- Создаёт кнопку
-        -- @param name Текст кнопки
-        -- @param callback Функция обратного вызова
-        -- @return TextButton Экземпляр кнопки
         function tab:CreateButton(name, callback)
             local button = Instance.new("TextButton")
             button.Size = UDim2.new(1, -10, 0, 35)
@@ -612,7 +558,7 @@ function GUI:CreateWindow(settings)
             button.MouseButton1Click:Connect(function()
                 local success, err = pcall(callback)
                 if not success then
-                    Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
+                    debugLog("Ошибка callback кнопки " .. name .. ": " .. tostring(err), "error")
                 end
             end)
 
@@ -627,16 +573,10 @@ function GUI:CreateWindow(settings)
             end)
 
             table.insert(tab.Elements, button)
-            print("[OmniUI] Кнопка создана: " .. name .. ", Visible: " .. tostring(button.Visible))
+            debugLog("Кнопка создана: " .. name .. ", Visible: " .. tostring(button.Visible), "info")
             return button
         end
 
-        --- Создаёт переключатель
-        -- @param name Текст переключателя
-        -- @param default Начальное состояние
-        -- @param callback Функция обратного вызова
-        -- @param flag Флаг для сохранения
-        -- @return table Объект переключателя
         function tab:CreateToggle(name, default, callback, flag)
             local toggle = {
                 Value = default or false,
@@ -688,7 +628,7 @@ function GUI:CreateWindow(settings)
                 switchStroke.Color = toggle.Value and GUI.SelectedTheme.ToggleEnabledStroke or GUI.SelectedTheme.ToggleDisabledStroke
                 local success, err = pcall(toggle.Callback, toggle.Value)
                 if not success then
-                    Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
+                    debugLog("Ошибка callback переключателя " .. name .. ": " .. tostring(err), "error")
                 end
                 if toggle.Flag then
                     OmniUI.Flags[toggle.Flag] = toggle.Value
@@ -696,6 +636,7 @@ function GUI:CreateWindow(settings)
                         Configurations:Save(OmniUI.Flags)
                     end
                 end
+                debugLog("Переключатель " .. name .. ": " .. (toggle.Value and "Вкл" or "Выкл"), "info")
             end)
 
             switch.MouseEnter:Connect(function()
@@ -709,19 +650,10 @@ function GUI:CreateWindow(settings)
             end)
 
             table.insert(tab.Elements, frame)
-            print("[OmniUI] Переключатель создан: " .. name .. ", Visible: " .. tostring(frame.Visible))
+            debugLog("Переключатель создан: " .. name .. ", Visible: " .. tostring(frame.Visible), "info")
             return toggle
         end
 
-        --- Создаёт слайдер
-        -- @param name Текст слайдера
-        -- @param range Диапазон значений {min, max}
-        -- @param increment Шаг изменения
-        -- @param suffix Суффикс (например, "%")
-        -- @param default Начальное значение
-        -- @param callback Функция обратного вызова
-        -- @param flag Флаг для сохранения
-        -- @return table Объект слайдера
         function tab:CreateSlider(name, range, increment, suffix, default, callback, flag)
             local slider = {
                 Value = default or range[1],
@@ -783,12 +715,14 @@ function GUI:CreateWindow(settings)
             sliderBar.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     dragging = true
+                    debugLog("Начато перетаскивание слайдера: " .. name, "info")
                 end
             end)
 
             sliderBar.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     dragging = false
+                    debugLog("Перетаскивание слайдера завершено: " .. name, "info")
                 end
             end)
 
@@ -803,7 +737,7 @@ function GUI:CreateWindow(settings)
                     valueLabel.Text = tostring(slider.Value) .. (suffix or "")
                     local success, err = pcall(slider.Callback, slider.Value)
                     if not success then
-                        Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
+                        debugLog("Ошибка callback слайдера " .. name .. ": " .. tostring(err), "error")
                     end
                     if slider.Flag then
                         OmniUI.Flags[slider.Flag] = slider.Value
@@ -811,21 +745,15 @@ function GUI:CreateWindow(settings)
                             Configurations:Save(OmniUI.Flags)
                         end
                     end
+                    debugLog("Слайдер " .. name .. ": Значение " .. slider.Value, "info")
                 end
             end)
 
             table.insert(tab.Elements, frame)
-            print("[OmniUI] Слайдер создан: " .. name .. ", Visible: " .. tostring(frame.Visible))
+            debugLog("Слайдер создан: " .. name .. ", Visible: " .. tostring(frame.Visible), "info")
             return slider
         end
 
-        --- Создаёт поле ввода
-        -- @param name Текст поля
-        -- @param placeholder Подсказка
-        -- @param default Начальное значение
-        -- @param callback Функция обратного вызова
-        -- @param flag Флаг для сохранения
-        -- @return table Объект поля ввода
         function tab:CreateInput(name, placeholder, default, callback, flag)
             local input = {
                 Value = default or "",
@@ -878,7 +806,7 @@ function GUI:CreateWindow(settings)
                     input.Value = textBox.Text
                     local success, err = pcall(input.Callback, input.Value)
                     if not success then
-                        Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
+                        debugLog("Ошибка callback поля ввода " .. name .. ": " .. tostring(err), "error")
                     end
                     if input.Flag then
                         OmniUI.Flags[input.Flag] = input.Value
@@ -886,21 +814,15 @@ function GUI:CreateWindow(settings)
                             Configurations:Save(OmniUI.Flags)
                         end
                     end
+                    debugLog("Поле ввода " .. name .. ": Значение " .. input.Value, "info")
                 end
             end)
 
             table.insert(tab.Elements, frame)
+            debugLog("Поле ввода создано: " .. name .. ", Visible: " .. tostring(frame.Visible), "info")
             return input
         end
 
-        --- Создаёт выпадающий список
-        -- @param name Текст списка
-        -- @param options Список опций
-        -- @param default Начальное значение
-        -- @param multiple Разрешить множественный выбор
-        -- @param callback Функция обратного вызова
-        -- @param flag Флаг для сохранения
-        -- @return table Объект выпадающего списка
         function tab:CreateDropdown(name, options, default, multiple, callback, flag)
             local dropdown = {
                 Value = default or (multiple and {} or options[1]),
@@ -1003,7 +925,7 @@ function GUI:CreateWindow(settings)
                         updateList()
                         local success, err = pcall(dropdown.Callback, dropdown.Value)
                         if not success then
-                            Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
+                            debugLog("Ошибка callback выпадающего списка " .. name .. ": " .. tostring(err), "error")
                         end
                         if dropdown.Flag then
                             OmniUI.Flags[dropdown.Flag] = dropdown.Value
@@ -1011,6 +933,7 @@ function GUI:CreateWindow(settings)
                                 Configurations:Save(OmniUI.Flags)
                             end
                         end
+                        debugLog("Выпадающий список " .. name .. ": Выбрано " .. (multiple and table.concat(dropdown.Value, ", ") or dropdown.Value), "info")
                     end)
                     height = height + 25
                 end
@@ -1021,19 +944,14 @@ function GUI:CreateWindow(settings)
 
             dropdownButton.MouseButton1Click:Connect(function()
                 dropdownList.Visible = not dropdownList.Visible
+                debugLog("Выпадающий список " .. name .. ": Видимость " .. tostring(dropdownList.Visible), "info")
             end)
 
             table.insert(tab.Elements, frame)
+            debugLog("Выпадающий список создан: " .. name .. ", Visible: " .. tostring(frame.Visible), "info")
             return dropdown
         end
 
-        --- Создаёт привязку клавиши
-        -- @param name Текст привязки
-        -- @param default Начальная клавиша
-        -- @param hold Режим удержания
-        -- @param callback Функция обратного вызова
-        -- @param flag Флаг для сохранения
-        -- @return table Объект привязки
         function tab:CreateKeybind(name, default, hold, callback, flag)
             local keybind = {
                 Value = default or "None",
@@ -1085,6 +1003,7 @@ function GUI:CreateWindow(settings)
             keybindButton.MouseButton1Click:Connect(function()
                 keybind.Binding = true
                 keybindButton.Text = "..."
+                debugLog("Начата привязка клавиши: " .. name, "info")
             end)
 
             local connection = UserInputService.InputBegan:Connect(function(input, processed)
@@ -1096,7 +1015,7 @@ function GUI:CreateWindow(settings)
                         keybind.Binding = false
                         local success, err = pcall(keybind.Callback, key)
                         if not success then
-                            Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
+                            debugLog("Ошибка callback привязки " .. name .. ": " .. tostring(err), "error")
                         end
                         if keybind.Flag then
                             OmniUI.Flags[keybind.Flag] = keybind.Value
@@ -1104,6 +1023,7 @@ function GUI:CreateWindow(settings)
                                 Configurations:Save(OmniUI.Flags)
                             end
                         end
+                        debugLog("Привязка клавиши " .. name .. ": " .. key, "info")
                     end
                 elseif keybind.Value ~= "None" and input.KeyCode.Name == keybind.Value and not processed then
                     if keybind.Hold then
@@ -1119,19 +1039,19 @@ function GUI:CreateWindow(settings)
                             while held do
                                 local success, err = pcall(keybind.Callback, true)
                                 if not success then
-                                    Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
+                                    debugLog("Ошибка callback удержания " .. name .. ": " .. tostring(err), "error")
                                 end
                                 task.wait()
                             end
                             local success, err = pcall(keybind.Callback, false)
                             if not success then
-                                Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
+                                debugLog("Ошибка callback отпускания " .. name .. ": " .. tostring(err), "error")
                             end
                         end)
                     else
                         local success, err = pcall(keybind.Callback, true)
                         if not success then
-                            Notifications:Create("Ошибка", "Ошибка callback: " .. tostring(err), 5, "Error")
+                            debugLog("Ошибка callback нажатия " .. name .. ": " .. tostring(err), "error")
                         end
                     end
                 end
@@ -1139,18 +1059,14 @@ function GUI:CreateWindow(settings)
 
             frame.Destroying:Connect(function()
                 connection:Disconnect()
+                debugLog("Подключение клавиши для " .. name .. " отключено", "info")
             end)
 
             table.insert(tab.Elements, frame)
+            debugLog("Привязка клавиши создана: " .. name .. ", Visible: " .. tostring(frame.Visible), "info")
             return keybind
         end
 
-        --- Создаёт метку
-        -- @param name Текст метки
-        -- @param icon ID иконки
-        -- @param color Цвет текста
-        -- @param warning Флаг предупреждения
-        -- @return TextLabel Экземпляр метки
         function tab:CreateLabel(name, icon, color, warning)
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(1, -10, 0, 30)
@@ -1173,13 +1089,10 @@ function GUI:CreateWindow(settings)
             end
 
             table.insert(tab.Elements, label)
+            debugLog("Метка создана: " .. name .. ", Visible: " .. tostring(label.Visible), "info")
             return label
         end
 
-        --- Создаёт параграф
-        -- @param title Заголовок
-        -- @param content Текст
-        -- @return Frame Экземпляр параграфа
         function tab:CreateParagraph(title, content)
             local paragraph = Instance.new("Frame")
             paragraph.Size = UDim2.new(1, -10, 0, 55)
@@ -1217,42 +1130,44 @@ function GUI:CreateWindow(settings)
             contentLabel.Parent = paragraph
 
             table.insert(tab.Elements, paragraph)
+            debugLog("Параграф создан: " .. title .. ", Visible: " .. tostring(paragraph.Visible), "info")
             return paragraph
         end
 
+        debugLog("Вкладка создана: " .. tabName .. ", Visible: " .. tostring(tab.Instance.Visible), "info")
         return tab
     end
 
-    --- Устанавливает видимость окна
-    -- @param visible Флаг видимости
     function window:SetVisible(visible)
         window.Visible = visible
         window.Hidden = not visible
         window.Instance.Enabled = visible
         if visible then
-            Notifications:Create("Хак активирован", "OmniUI захватил систему.", 5, "Info")
             Animations:Create(window.MainFrame, {Position = UDim2.new(0.5, -225, 0.5, -200), BackgroundTransparency = 0}, 0.7)
         else
-            Notifications:Create("Хак скрыт", "Нажмите " .. window.Keybind .. " для активации.", 5, "Info")
             Animations:Create(window.MainFrame, {Position = UDim2.new(0.5, -225, 0.5, 200), BackgroundTransparency = 1}, 0.7)
         end
+        debugLog("Окно " .. window.Name .. ": Видимость " .. tostring(visible), "info")
     end
 
-    --- Загружает конфигурацию
     function window:LoadConfiguration()
-        if not window.ConfigSaving.Enabled then return end
+        if not window.ConfigSaving.Enabled then
+            debugLog("Сохранение конфигурации отключено для окна: " .. window.Name, "info")
+            return
+        end
         local data = Configurations:Load()
         for flag, value in pairs(data) do
             if OmniUI.Flags[flag] then
                 OmniUI.Flags[flag] = value
+                debugLog("Флаг загружен: " .. flag .. " = " .. tostring(value), "info")
             end
         end
-        Notifications:Create("Конфигурация загружена", "Настройки восстановлены.", 5, "Info")
     end
 
     local keybindConnection = UserInputService.InputBegan:Connect(function(input, processed)
         if input.KeyCode.Name == window.Keybind and not processed then
             window:SetVisible(not window.Visible)
+            debugLog("Клавиша нажата: " .. window.Keybind .. ", переключение видимости", "info")
         end
     end)
 
@@ -1261,10 +1176,10 @@ function GUI:CreateWindow(settings)
         if dragConnection then
             dragConnection:Disconnect()
         end
+        debugLog("Окно уничтожено: " .. window.Name, "info")
     end)
 
-    Notifications:Create("Хак активирован", "OmniUI захватил систему.", 5, "Info")
-    print("[OmniUI] Окно создано: " .. window.Name .. ", Parent: " .. window.Instance.Parent.Name)
+    debugLog("Окно создано: " .. window.Name .. ", Parent: " .. window.Instance.Parent.Name, "info")
 
     GUI.Windows[window.Name] = window
     Analytics:SendReport()
@@ -1274,7 +1189,6 @@ end
 -- Инициализация
 OmniUI.GUI = GUI
 OmniUI.API = API
-OmniUI.Notifications = Notifications
 OmniUI.Configurations = Configurations
 OmniUI.Analytics = Analytics
 OmniUI.Animations = Animations
@@ -1282,6 +1196,7 @@ OmniUI.Icons = Icons
 
 -- Пример использования
 if RunService:IsStudio() then
+    debugLog("Запуск тестового окна в Roblox Studio", "info")
     local window = GUI:CreateWindow({
         Name = "CyberForge Hack",
         ConfigurationSaving = { Enabled = true, FileName = "HackConfig" },
@@ -1289,31 +1204,25 @@ if RunService:IsStudio() then
 
     local tab = window:CreateTab("Exploits", "Default")
     tab:CreateButton("God Mode", function()
-        local playerId = Players.LocalPlayer.UserId
+        local playerId = Players.LocalPlayer and Players.LocalPlayer.UserId or "Unknown"
         local data = API:UpdateInventory(playerId, "god_mode", 1)
-        Notifications:Create("Успех", "God Mode: Активирована неуязвимость", 5, "Info")
     end)
 
     tab:CreateToggle("Speed Hack", false, function(value)
-        local playerId = Players.LocalPlayer.UserId
+        local playerId = Players.LocalPlayer and Players.LocalPlayer.UserId or "Unknown"
         local data = API:UpdateInventory(playerId, "speed_hack", value and 1 or 0)
-        Notifications:Create("Успех", "Speed Hack: " .. (value and "Скорость света" or "Отключено"), 5, "Info")
     end, "SpeedHackToggle")
 
     tab:CreateSlider("Health", {0, 100}, 10, "%", 50, function(value)
-        Notifications:Create("Здоровье установлено", "Уровень: " .. value .. "%", 5, "Info")
     end, "HealthSlider")
 
     tab:CreateInput("Target Player", "Введите имя игрока...", "", function(text)
-        Notifications:Create("Цель выбрана", "Заблокировано на: " .. text, 5, "Info")
     end, "TargetInput")
 
     tab:CreateDropdown("Exploit Mode", {"Silent", "Aggressive", "Stealth"}, "Silent", false, function(mode)
-        Notifications:Create("Режим изменён", "Режим эксплойта: " .. mode, 5, "Info")
     end, "ExploitModeDropdown")
 
     tab:CreateKeybind("Teleport", "T", false, function()
-        Notifications:Create("Телепорт", "Перемещение на целевую позицию", 5, "Info")
     end, "TeleportKeybind")
 
     tab:CreateLabel("Статус: Онлайн", "Info")
@@ -1321,7 +1230,6 @@ if RunService:IsStudio() then
 
     window:LoadConfiguration()
 
-    -- Тест смены темы
     task.spawn(function()
         task.wait(5)
         GUI:ChangeTheme("NeonTokyo")

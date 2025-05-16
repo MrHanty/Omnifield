@@ -78,7 +78,7 @@ local Config = {
     API_URL = "https://mock.api/roblox", -- Мок для тестирования
     AnalyticsEnabled = true,
     DefaultKeybind = "K",
-    Font = Enum.Font.SourceSansPro, -- Стандартный шрифт Roblox
+    Font = Enum.Font.SourceSans, -- Стандартный шрифт Roblox
 }
 
 -- Модуль анимаций

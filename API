@@ -1,7 +1,7 @@
 -- OmniUI API 1.0.2
 
 local OmniUI = {
-    Version = "1.2.2",
+    Version = "1.0.2",
     Build = "OMNI-CYBERFORGE-V2",
     Flags = {},
     Themes = {

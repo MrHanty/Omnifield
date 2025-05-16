@@ -1,7 +1,8 @@
--- OmniUI API 1.0.2
+-- OmniUI API
+
 
 local OmniUI = {
-    Version = "1.0.2",
+    Version = "1.0.1",
     Build = "OMNI-CYBERFORGE-V2",
     Flags = {},
     Themes = {
@@ -78,7 +79,7 @@ local Config = {
     API_URL = "https://mock.api/roblox", -- Мок для тестирования
     AnalyticsEnabled = true,
     DefaultKeybind = "K",
-    Font = Enum.Font.SourceSans, -- Стандартный шрифт Roblox
+    Font = Enum.Font.SourceSans, -- Исправлен шрифт
 }
 
 -- Модуль анимаций
@@ -407,7 +408,7 @@ function GUI:CreateWindow(settings)
     window.Instance.Name = "OmniUI_" .. window.Name
     window.Instance.Parent = guiParent
     window.Instance.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    window.Instance.DisplayOrder = 1000
+    window.Instance.DisplayOrder = 100000
     window.Instance.Enabled = true
     window.Instance.ResetOnSpawn = false
 
@@ -465,34 +466,22 @@ function GUI:CreateWindow(settings)
     minimiseButton.Font = Config.Font
     minimiseButton.Parent = window.Topbar
 
-    local dragBar = Instance.new("Frame")
-    dragBar.Size = UDim2.new(0, 100, 0, 4)
-    dragBar.Position = UDim2.new(0.5, -50, 0, -10)
-    dragBar.BackgroundColor3 = GUI.SelectedTheme.ElementStroke
-    dragBar.BackgroundTransparency = 0.5
-    dragBar.Parent = window.MainFrame
-
+    -- Новая логика перетаскивания
     local dragInteract = Instance.new("TextButton")
-    dragInteract.Size = UDim2.new(1, 0, 1, 0)
+    dragInteract.Size = UDim2.new(1, -80, 0, 40) -- Зона перетаскивания (верхняя панель, исключая кнопки)
+    dragInteract.Position = UDim2.new(0, 0, 0, 0)
     dragInteract.BackgroundTransparency = 1
     dragInteract.Text = ""
-    dragInteract.Parent = dragBar
+    dragInteract.Parent = window.Topbar
 
-    -- Оптимизированное перетаскивание
-    local dragging, dragStart, startPos
+    local dragging = false
+    local dragStartPos, frameStartPos
+
     dragInteract.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            dragStart = input.Position
-            startPos = window.MainFrame.Position
-        end
-    end)
-
-    dragInteract.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            Animations:Create(window.MainFrame, {Position = newPos}, 0.1)
+            dragStartPos = input.Position
+            frameStartPos = window.MainFrame.AbsolutePosition
         end
     end)
 
@@ -502,8 +491,24 @@ function GUI:CreateWindow(settings)
         end
     end)
 
+    local dragConnection
+    dragConnection = RunService.RenderStepped:Connect(function()
+        if dragging then
+            local mousePos = UserInputService:GetMouseLocation()
+            local delta = mousePos - dragStartPos
+            local newPos = frameStartPos + delta
+            window.MainFrame.Position = UDim2.new(
+                0, math.clamp(newPos.X, 0, window.Instance.AbsoluteSize.X - window.MainFrame.AbsoluteSize.X),
+                0, math.clamp(newPos.Y, 0, window.Instance.AbsoluteSize.Y - window.MainFrame.AbsoluteSize.Y)
+            )
+        end
+    end)
+
     closeButton.MouseButton1Click:Connect(function()
-        window:SetVisible(false)
+        window.Instance:Destroy()
+        if dragConnection then
+            dragConnection:Disconnect()
+        end
     end)
 
     minimiseButton.MouseButton1Click:Connect(function()
@@ -560,6 +565,7 @@ function GUI:CreateWindow(settings)
                 t.Button.BackgroundColor3 = (t == tab) and GUI.SelectedTheme.ElementBackgroundHover or GUI.SelectedTheme.ElementBackground
                 t.Button.UIStroke.Transparency = (t == tab) and 0 or 0.5
             end
+            print("[OmniUI] Вкладка активирована: " .. tabName .. ", Visible: " .. tostring(tab.Instance.Visible))
         end)
 
         tab.Button.MouseEnter:Connect(function()
@@ -621,6 +627,7 @@ function GUI:CreateWindow(settings)
             end)
 
             table.insert(tab.Elements, button)
+            print("[OmniUI] Кнопка создана: " .. name .. ", Visible: " .. tostring(button.Visible))
             return button
         end
 
@@ -702,6 +709,7 @@ function GUI:CreateWindow(settings)
             end)
 
             table.insert(tab.Elements, frame)
+            print("[OmniUI] Переключатель создан: " .. name .. ", Visible: " .. tostring(frame.Visible))
             return toggle
         end
 
@@ -807,6 +815,7 @@ function GUI:CreateWindow(settings)
             end)
 
             table.insert(tab.Elements, frame)
+            print("[OmniUI] Слайдер создан: " .. name .. ", Visible: " .. tostring(frame.Visible))
             return slider
         end
 
@@ -1249,6 +1258,9 @@ function GUI:CreateWindow(settings)
 
     window.Instance.Destroying:Connect(function()
         keybindConnection:Disconnect()
+        if dragConnection then
+            dragConnection:Disconnect()
+        end
     end)
 
     Notifications:Create("Хак активирован", "OmniUI захватил систему.", 5, "Info")

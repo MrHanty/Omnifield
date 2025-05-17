@@ -1,6 +1,5 @@
 -- SimpleGUI: Библиотека GUI для Roblox
 
-
 local SimpleGUI = {}
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -50,6 +49,7 @@ function SimpleGUI.new(theme)
         local visible = config.WindowVisible ~= false -- По умолчанию true
         local width = config.Width or 300 -- По умолчанию 300
         local height = config.Height or 400 -- По умолчанию 400
+        local showCleanupNotification = config.ShowCleanupNotification ~= false -- Уведомление при очистке
 
         local windowFrame = createInstance("Frame", screenGui, {
             Name = config.Name or "Window",
@@ -59,6 +59,31 @@ function SimpleGUI.new(theme)
             BorderSizePixel = 0,
             Visible = visible
         })
+
+        -- Таблица для отслеживания эффектов
+        local activeEffects = {
+            connections = {},
+            cleanups = {}
+        }
+
+        -- Функция очистки эффектов
+        local function cleanupEffects()
+            for key, connection in pairs(activeEffects.connections) do
+                if connection then
+                    connection:Disconnect()
+                end
+            end
+            for key, cleanup in pairs(activeEffects.cleanups) do
+                if cleanup then
+                    cleanup()
+                end
+            end
+            activeEffects.connections = {}
+            activeEffects.cleanups = {}
+            if showCleanupNotification then
+                gui:Notify("Очистка", "Все эффекты сброшены", 3)
+            end
+        end
 
         local topbar = createInstance("Frame", windowFrame, {
             Name = "Topbar",
@@ -93,7 +118,6 @@ function SimpleGUI.new(theme)
                 ZIndex = 2
             })
 
-            -- Анимация при наведении
             closeButton.MouseEnter:Connect(function()
                 tween(closeButton, {BackgroundColor3 = theme.AccentColor}, 0.2)
             end)
@@ -101,8 +125,8 @@ function SimpleGUI.new(theme)
                 tween(closeButton, {BackgroundColor3 = theme.SecondaryColor}, 0.2)
             end)
 
-            -- Закрытие (скрытие окна)
             closeButton.MouseButton1Click:Connect(function()
+                cleanupEffects()
                 windowFrame.Visible = false
                 tween(closeButton, {Size = UDim2.new(0, 18, 0, 18)}, 0.1).Completed:Connect(function()
                     tween(closeButton, {Size = UDim2.new(0, 20, 0, 20)}, 0.1)
@@ -139,7 +163,6 @@ function SimpleGUI.new(theme)
                         startPos.Y.Scale,
                         startPos.Y.Offset + delta.Y
                     )
-                    -- Ограничение по границам экрана
                     local screenSize = screenGui.AbsoluteSize
                     local frameSize = windowFrame.AbsoluteSize
                     newPos = UDim2.new(
@@ -204,7 +227,6 @@ function SimpleGUI.new(theme)
                 TextScaled = true
             })
 
-            -- Анимация при наведении на вкладку
             tabButton.MouseEnter:Connect(function()
                 if tabFrame ~= activeTab then
                     tween(tabButton, {BackgroundColor3 = theme.AccentColor:Lerp(theme.SecondaryColor, 0.7)}, 0.2)
@@ -218,7 +240,6 @@ function SimpleGUI.new(theme)
 
             local sections = {}
 
-            -- Активация вкладки
             local function activateTab()
                 if activeTab then
                     activeTab.Visible = false
@@ -284,7 +305,13 @@ function SimpleGUI.new(theme)
 
                     button.MouseButton1Click:Connect(function()
                         if config.Callback then
-                            config.Callback()
+                            local connection, cleanup = config.Callback()
+                            if connection then
+                                activeEffects.connections[config.Name .. "_Button"] = connection
+                            end
+                            if config.Cleanup then
+                                activeEffects.cleanups[config.Name .. "_Button"] = config.Cleanup
+                            end
                         end
                     end)
                 end
@@ -339,7 +366,13 @@ function SimpleGUI.new(theme)
                             fill.Size = UDim2.new(relativeX, 0, 1, 0)
                             label.Text = config.Name .. ": " .. value
                             if config.Callback then
-                                config.Callback(value)
+                                local connection, cleanup = config.Callback(value)
+                                if connection then
+                                    activeEffects.connections[config.Name .. "_Slider"] = connection
+                                end
+                                if config.Cleanup then
+                                    activeEffects.cleanups[config.Name .. "_Slider"] = config.Cleanup
+                                end
                             end
                         end
                     end)
@@ -360,7 +393,13 @@ function SimpleGUI.new(theme)
 
                     textbox.FocusLost:Connect(function()
                         if config.Callback then
-                            config.Callback(textbox.Text)
+                            local connection, cleanup = config.Callback(textbox.Text)
+                            if connection then
+                                activeEffects.connections[config.Name .. "_Textbox"] = connection
+                            end
+                            if config.Cleanup then
+                                activeEffects.cleanups[config.Name .. "_Textbox"] = config.Cleanup
+                            end
                         end
                     end)
                 end
@@ -384,6 +423,7 @@ function SimpleGUI.new(theme)
         -- Скрыть окно
         function window:HideWindow()
             if windowFrame.Visible then
+                cleanupEffects()
                 tween(windowFrame, {Transparency = 0.8}, 0.3).Completed:Connect(function()
                     windowFrame.Visible = false
                     windowFrame.Transparency = 0
@@ -400,6 +440,7 @@ function SimpleGUI.new(theme)
             end
         end
 
+        window.Visible = windowFrame.Visible -- Для проверки состояния
         return window
     end
 
@@ -447,80 +488,3 @@ function SimpleGUI.new(theme)
 end
 
 return SimpleGUI
-
--- Пример использования
---[[
-local GUI = SimpleGUI.new({
-    PrimaryColor = Color3.fromRGB(40, 40, 40),
-    SecondaryColor = Color3.fromRGB(60, 60, 60),
-    TextColor = Color3.fromRGB(255, 255, 255),
-    AccentColor = Color3.fromRGB(80, 80, 255)
-})
-
-local Window = GUI:CreateWindow({
-    Name = "Мой Эксплойт",
-    Draggable = true,
-    Closable = true,
-    WindowVisible = true,
-    Width = 500,
-    Height = 600
-})
-local MainTab = Window:CreateTab("Основное")
-local PlayerSection = MainTab:CreateSection("Управление игроком")
-
-PlayerSection:CreateButton({
-    Name = "Бесконечный прыжок",
-    Callback = function()
-        _G.infinjump = not _G.infinjump
-        if _G.infinJumpStarted == nil then
-            _G.infinJumpStarted = true
-            local plr = game:GetService("Players").LocalPlayer
-            local m = plr:GetMouse()
-            m.KeyDown:Connect(function(k)
-                if _G.infinjump and k:byte() == 32 then
-                    local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-                    if humanoid then
-                        humanoid:ChangeState("Jumping")
-                        wait()
-                        humanoid:ChangeState("Seated")
-                    end
-                end
-            end)
-        end
-    end
-})
-
-PlayerSection:CreateSlider({
-    Name = "Скорость",
-    Min = 16,
-    Max = 100,
-    Default = 16,
-    Callback = function(value)
-        local character = game.Players.LocalPlayer.Character
-        if character then
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = value
-            end
-        end
-    end
-})
-
-PlayerSection:CreateTextbox({
-    Name = "Выполнить скрипт",
-    Default = "",
-    Callback = function(text)
-        if text and text ~= "" then
-            loadstring(text)()
-        end
-    end
-})
-
-GUI:Notify("GUI загружен", "Добро пожаловать в SimpleGUI!", 5)
-
--- Пример переключения видимости
-wait(10)
-Window:ToggleWindow()
-wait(2)
-Window:ToggleWindow()
---]]

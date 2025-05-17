@@ -48,12 +48,14 @@ function SimpleGUI.new(theme)
         local draggable = config.Draggable ~= false -- По умолчанию true
         local closable = config.Closable ~= false -- По умолчанию true
         local visible = config.WindowVisible ~= false -- По умолчанию true
+        local width = config.Width or 300 -- По умолчанию 300
+        local height = config.Height or 400 -- По умолчанию 400
 
         local windowFrame = createInstance("Frame", screenGui, {
             Name = config.Name or "Window",
             BackgroundColor3 = theme.PrimaryColor,
-            Position = UDim2.new(0.5, -150, 0.5, -100),
-            Size = UDim2.new(0, 300, 0, 400),
+            Position = UDim2.new(0.5, -width / 2, 0.5, -height / 2),
+            Size = UDim2.new(0, width, 0, height),
             BorderSizePixel = 0,
             Visible = visible
         })
@@ -68,7 +70,7 @@ function SimpleGUI.new(theme)
         local title = createInstance("TextLabel", topbar, {
             BackgroundTransparency = 1,
             Position = UDim2.new(0.05, 0, 0, 0),
-            Size = UDim2.new(0.4, 0, 1, 0),
+            Size = UDim2.new(0.8, 0, 1, 0),
             Font = Enum.Font.SourceSansBold,
             Text = config.Name or "SimpleGUI",
             TextColor3 = theme.TextColor,
@@ -149,25 +151,34 @@ function SimpleGUI.new(theme)
             end)
         end
 
-        local tabContainer = createInstance("Frame", windowFrame, {
-            Name = "TabContainer",
-            BackgroundTransparency = 1,
+        -- Боковая панель для вкладок
+        local sidebar = createInstance("Frame", windowFrame, {
+            Name = "Sidebar",
+            BackgroundColor3 = theme.SecondaryColor,
             Position = UDim2.new(0, 0, 0, 30),
-            Size = UDim2.new(1, 0, 1, -30)
+            Size = UDim2.new(0, 100, 1, -30),
+            BorderSizePixel = 0
         })
 
-        local tabButtons = createInstance("Frame", topbar, {
+        local tabButtons = createInstance("Frame", sidebar, {
             Name = "TabButtons",
             BackgroundTransparency = 1,
-            Position = UDim2.new(0.45, 0, 0, 0),
-            Size = UDim2.new(0.5, 0, 1, 0)
+            Position = UDim2.new(0, 5, 0, 5),
+            Size = UDim2.new(1, -10, 1, -10)
         })
 
         local tabButtonLayout = createInstance("UIListLayout", tabButtons, {
-            FillDirection = Enum.FillDirection.Horizontal,
+            FillDirection = Enum.FillDirection.Vertical,
             HorizontalAlignment = Enum.HorizontalAlignment.Left,
             SortOrder = Enum.SortOrder.LayoutOrder,
             Padding = UDim.new(0, 5)
+        })
+
+        local tabContainer = createInstance("Frame", windowFrame, {
+            Name = "TabContainer",
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 100, 0, 30),
+            Size = UDim2.new(1, -100, 1, -30)
         })
 
         local tabs = {}
@@ -186,12 +197,24 @@ function SimpleGUI.new(theme)
             local tabButton = createInstance("TextButton", tabButtons, {
                 Name = name .. "Button",
                 BackgroundColor3 = theme.SecondaryColor,
-                Size = UDim2.new(0, 80, 0, 25),
+                Size = UDim2.new(1, 0, 0, 30),
                 Font = Enum.Font.SourceSans,
                 Text = name,
                 TextColor3 = theme.TextColor,
                 TextScaled = true
             })
+
+            -- Анимация при наведении на вкладку
+            tabButton.MouseEnter:Connect(function()
+                if tabFrame ~= activeTab then
+                    tween(tabButton, {BackgroundColor3 = theme.AccentColor:Lerp(theme.SecondaryColor, 0.7)}, 0.2)
+                end
+            end)
+            tabButton.MouseLeave:Connect(function()
+                if tabFrame ~= activeTab then
+                    tween(tabButton, {BackgroundColor3 = theme.SecondaryColor}, 0.2)
+                end
+            end)
 
             local sections = {}
 
@@ -359,6 +382,7 @@ function SimpleGUI.new(theme)
         end
 
         -- Скрыть окно
+        function window:HideWindow Constructing a proper Lua table structure
         function window:HideWindow()
             if windowFrame.Visible then
                 tween(windowFrame, {Transparency = 0.8}, 0.3).Completed:Connect(function()
@@ -438,7 +462,9 @@ local Window = GUI:CreateWindow({
     Name = "Мой Эксплойт",
     Draggable = true,
     Closable = true,
-    WindowVisible = true
+    WindowVisible = true,
+    Width = 500,
+    Height = 600
 })
 local MainTab = Window:CreateTab("Основное")
 local PlayerSection = MainTab:CreateSection("Управление игроком")

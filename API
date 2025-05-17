@@ -382,7 +382,6 @@ function SimpleGUI.new(theme)
         end
 
         -- Скрыть окно
-        function window:HideWindow Constructing a proper Lua table structure
         function window:HideWindow()
             if windowFrame.Visible then
                 tween(windowFrame, {Transparency = 0.8}, 0.3).Completed:Connect(function()

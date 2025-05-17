@@ -61,7 +61,8 @@ function SimpleGUI.new(theme, options)
     local gui = { Windows = {} }
     options = options or {}
     debugMode = options.DebugMode or false
-    local scaleFactor = options.UIScale or 1 -- Поддержка масшта  math.clamp(scaleFactor, 0.5, 2) -- Ограничение масштаба
+    local scaleFactor = options.UIScale or 1
+    scaleFactor = math.clamp(scaleFactor, 0.5, 2)
 
     local screenGui = createInstance("ScreenGui", nil, {
         Name = "SimpleGUI_" .. HttpService:GenerateGUID(false),
@@ -69,7 +70,7 @@ function SimpleGUI.new(theme, options)
         DisplayOrder = 100
     })
 
-    -- Универсальная защита GUI для всех эксплойтов
+    -- Универсальная защита GUI
     local success, err = pcall(function()
         local exploitAPIs = {
             { check = function() return syn and syn.protect_gui end, protect = function() syn.protect_gui(screenGui); screenGui.Parent = CoreGui end },
@@ -101,7 +102,7 @@ function SimpleGUI.new(theme, options)
         TextSize = 16
     }
 
-    -- Уведомления (перемещено перед CreateWindow)
+    -- Уведомления
     function gui:Notify(config)
         if not config or not config.Title or not config.Content then
             return
@@ -174,7 +175,6 @@ function SimpleGUI.new(theme, options)
         local showCleanupNotification = config.ShowCleanupNotification ~= false
         local configurationSaving = config.ConfigurationSaving or { Enabled = false, FolderName = "SimpleGUI", FileName = "Settings" }
 
-        -- Проверка уникальности   уникальности имени окна
         local windowName = config.Name or "Window"
         for _, w in ipairs(gui.Windows) do
             if w ~= window and w.Name == windowName then
@@ -198,7 +198,6 @@ function SimpleGUI.new(theme, options)
             Color = ColorSequence.new(theme.PrimaryColor, theme.SecondaryColor)
         })
 
-        -- Обновление позиции при изменении размера экрана
         local screenSizeConnection = screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
             if not windowFrame or not windowFrame.Parent then return end
             local screenSize = screenGui.AbsoluteSize
@@ -212,7 +211,6 @@ function SimpleGUI.new(theme, options)
         debugConnections[windowName .. "_ScreenSize"] = screenSizeConnection
         logDebug("Создано соединение для отслеживания размера экрана: " .. windowName)
 
-        -- Таблица для отслеживания эффектов
         local activeEffects = {
             connections = {},
             cleanups = {},
@@ -220,10 +218,8 @@ function SimpleGUI.new(theme, options)
             elementNames = {}
         }
 
-        -- Таблица для настроек
         local settings = {}
 
-        -- Функция очистки эффектов
         local function cleanupEffects()
             for key, connection in pairs(activeEffects.connections) do
                 if connection and typeof(connection) == "RBXScriptConnection" then
@@ -257,9 +253,8 @@ function SimpleGUI.new(theme, options)
             end
         end
 
-        -- Сохранение настроек с учётом ограничений DataStore
         local lastSave = 0
-        local saveInterval = 10 -- секунд
+        local saveInterval = 10
         function window:SaveConfiguration()
             if not configurationSaving.Enabled then return end
             if tick() - lastSave < saveInterval then return end
@@ -309,7 +304,6 @@ function SimpleGUI.new(theme, options)
             end
         end
 
-        -- Загрузка настроек
         function window:LoadConfiguration()
             if not configurationSaving.Enabled then return end
             local success, data
@@ -362,7 +356,6 @@ function SimpleGUI.new(theme, options)
             ZIndex = 12
         })
 
-        -- Кнопка закрытия
         local closeButton
         if closable then
             closeButton = createInstance("TextButton", topbar, {
@@ -398,7 +391,6 @@ function SimpleGUI.new(theme, options)
             activeEffects.connections[windowName .. "_CloseClick"] = closeClick
         end
 
-        -- Логика перемещения
         if draggable then
             local dragging = false
             local dragStart = nil
@@ -451,7 +443,6 @@ function SimpleGUI.new(theme, options)
             activeEffects.connections["DragEnded"] = dragEnded
         end
 
-        -- Боковая панель для вкладок
         local sidebar = createInstance("Frame", windowFrame, {
             Name = "Sidebar",
             BackgroundColor3 = theme.SecondaryColor,
@@ -489,7 +480,6 @@ function SimpleGUI.new(theme, options)
         local tabs = {}
         local activeTab = nil
 
-        -- Создание вкладки
         function window:CreateTab(name, icon)
             if not name then
                 gui:Notify({
@@ -501,7 +491,6 @@ function SimpleGUI.new(theme, options)
                 return nil
             end
 
-            -- Проверка уникальности имени вкладки
             if tabs[name] then
                 name = name .. "_" .. HttpService:GenerateGUID(false)
             end
@@ -564,7 +553,6 @@ function SimpleGUI.new(theme, options)
                 activateTab()
             end
 
-            -- Создание секции
             function tab:CreateSection(name)
                 if not name then
                     gui:Notify({
@@ -605,10 +593,9 @@ function SimpleGUI.new(theme, options)
 
                 local elementLayout = createInstance("UIListLayout", elementContainer, {
                     SortOrder = Enum.SortOrder.LayoutOrder,
-                    Padding = UDim.new(0, 5 * scaleFactor)
+                    Padding = UDim.new(0, 8 * scaleFactor)
                 })
 
-                -- Автоматическое обновление размеров
                 local layoutConnection = elementLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
                     if not elementContainer or not elementContainer.Parent then return end
                     local contentHeight = elementLayout.AbsoluteContentSize.Y
@@ -618,7 +605,6 @@ function SimpleGUI.new(theme, options)
                 activeEffects.connections[name .. "_SectionLayout"] = layoutConnection
                 logDebug("Создано соединение для секции: " .. name)
 
-                -- Проверка уникальности имени элемента
                 local function checkUniqueName(elementName)
                     if activeEffects.elementNames[elementName] then
                         gui:Notify({
@@ -633,7 +619,6 @@ function SimpleGUI.new(theme, options)
                     return elementName
                 end
 
-                -- Создание кнопки
                 function section:CreateButton(config)
                     if not config or not config.Name then
                         gui:Notify({
@@ -683,7 +668,6 @@ function SimpleGUI.new(theme, options)
                     activeEffects.connections[uniqueName .. "_ButtonLeave"] = buttonLeave
                 end
 
-                -- Создание переключателя
                 function section:CreateToggle(config)
                     if not config or not config.Name then
                         gui:Notify({
@@ -756,7 +740,6 @@ function SimpleGUI.new(theme, options)
                     activeEffects.connections[uniqueName .. "_ToggleClick"] = toggleClick
                 end
 
-                -- Создание слайдера
                 function section:CreateSlider(config)
                     if not config or not config.Name or not config.Min or not config.Max then
                         gui:Notify({
@@ -843,7 +826,6 @@ function SimpleGUI.new(theme, options)
                     activeEffects.connections[uniqueName .. "_SliderChanged"] = changedConnection
                 end
 
-                -- Создание текстового поля
                 function section:CreateTextbox(config)
                     if not config or not config.Name then
                         gui:Notify({
@@ -888,7 +870,6 @@ function SimpleGUI.new(theme, options)
                     activeEffects.connections[uniqueName .. "_TextboxFocusLost"] = focusLostConnection
                 end
 
-                -- Создание выпадающего списка
                 function section:CreateDropdown(config)
                     if not config or not config.Name or not config.Options then
                         gui:Notify({
@@ -939,8 +920,8 @@ function SimpleGUI.new(theme, options)
                         Size = UDim2.new(1, 0, 0, 0),
                         Position = UDim2.new(0, 0, 1, 0),
                         Visible = false,
-                        ClipsDescendants = true,
-                        ZIndex = 17
+                        ClipsDescendants = false,
+                        ZIndex = 100
                     })
 
                     createInstance("UICorner", optionContainer, { CornerRadius = UDim.new(0, 4 * scaleFactor) })
@@ -959,7 +940,7 @@ function SimpleGUI.new(theme, options)
                             Text = option,
                             TextColor3 = theme.TextColor,
                             TextSize = theme.TextSize * scaleFactor,
-                            ZIndex = 18
+                            ZIndex = 101
                         })
 
                         createInstance("UICorner", optionButton, { CornerRadius = UDim.new(0, 4 * scaleFactor) })
@@ -998,7 +979,6 @@ function SimpleGUI.new(theme, options)
                     activeEffects.connections[uniqueName .. "_DropdownToggle"] = toggleConnection
                 end
 
-                -- Создание привязки клавиш
                 function section:CreateKeybind(config)
                     if not config or not config.Name then
                         gui:Notify({
@@ -1092,7 +1072,6 @@ function SimpleGUI.new(theme, options)
                     activeEffects.connections[uniqueName .. "_KeybindBinding"] = connection
                 end
 
-                -- Создание цветовой палитры
                 function section:CreateColorPicker(config)
                     if not config or not config.Name then
                         gui:Notify({
@@ -1138,8 +1117,8 @@ function SimpleGUI.new(theme, options)
                         Size = UDim2.new(1, 0, 0, 0),
                         Position = UDim2.new(0, 0, 1, 0),
                         Visible = false,
-                        ClipsDescendants = true,
-                        ZIndex = 17
+                        ClipsDescendants = false,
+                        ZIndex = 100
                     })
 
                     createInstance("UICorner", pickerFrame, { CornerRadius = UDim.new(0, 4 * scaleFactor) })
@@ -1148,7 +1127,7 @@ function SimpleGUI.new(theme, options)
                         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
                         Size = UDim2.new(1, -10 * scaleFactor, 0, 10 * scaleFactor),
                         Position = UDim2.new(0, 5 * scaleFactor, 0, 5 * scaleFactor),
-                        ZIndex = 18
+                        ZIndex = 101
                     })
 
                     createInstance("UIGradient", hueBar, {
@@ -1167,7 +1146,7 @@ function SimpleGUI.new(theme, options)
                         BackgroundColor3 = theme.TextColor,
                         Size = UDim2.new(0, 4 * scaleFactor, 1, 0),
                         Position = UDim2.new(0, 0, 0, 0),
-                        ZIndex = 19
+                        ZIndex = 102
                     })
 
                     local isOpen = false
@@ -1237,7 +1216,6 @@ function SimpleGUI.new(theme, options)
             return tab
         end
 
-        -- Показать окно
         function window:ShowWindow()
             if not windowFrame or not windowFrame.Parent then
                 gui:Notify({
@@ -1255,7 +1233,6 @@ function SimpleGUI.new(theme, options)
             end
         end
 
-        -- Скрыть окно
         function window:HideWindow()
             if not windowFrame or not windowFrame.Parent then
                 gui:Notify({
@@ -1277,7 +1254,6 @@ function SimpleGUI.new(theme, options)
             end
         end
 
-        -- Переключить видимость окна
         function window:ToggleWindow()
             if not windowFrame or not windowFrame.Parent then
                 gui:Notify({
@@ -1295,7 +1271,6 @@ function SimpleGUI.new(theme, options)
             end
         end
 
-        -- Удалить окно
         function window:Destroy()
             cleanupEffects()
             for i, w in ipairs(gui.Windows) do
@@ -1315,7 +1290,6 @@ function SimpleGUI.new(theme, options)
         window.Name = windowName
         window:LoadConfiguration()
 
-        -- Интеграция с Roblox
         local playerAddedConnection = Players.PlayerAdded:Connect(function(player)
             if player == LocalPlayer then
                 window:ShowWindow()
@@ -1327,14 +1301,78 @@ function SimpleGUI.new(theme, options)
         return window
     end
 
-    -- Переключение всех окон
+    -- Новый декларативный конструктор
+    function gui:Construct(config)
+        if not config or type(config) ~= "table" or not config.windows then
+            gui:Notify({
+                Title = "Ошибка",
+                Content = "Неверная конфигурация для Construct",
+                Type = "Error",
+                Duration = 5
+            })
+            return
+        end
+
+        local windows = {}
+        for _, windowConfig in ipairs(config.windows) do
+            local window = gui:CreateWindow(windowConfig)
+            if not window then
+                logDebug("Не удалось создать окно: " .. tostring(windowConfig.Name))
+                continue
+            end
+
+            for _, tabConfig in ipairs(windowConfig.tabs or {}) do
+                local tab = window:CreateTab(tabConfig.Name, tabConfig.Icon)
+                if not tab then
+                    logDebug("Не удалось создать вкладку: " .. tostring(tabConfig.Name))
+                    continue
+                end
+
+                for _, sectionConfig in ipairs(tabConfig.sections or {}) do
+                    local section = tab:CreateSection(sectionConfig.Name)
+                    if not section then
+                        logDebug("Не удалось создать секцию: " .. tostring(sectionConfig.Name))
+                        continue
+                    end
+
+                    for _, elementConfig in ipairs(sectionConfig.elements or {}) do
+                        local elementType = elementConfig.Type
+                        if elementType == "Button" then
+                            section:CreateButton(elementConfig)
+                        elseif elementType == "Toggle" then
+                            section:CreateToggle(elementConfig)
+                        elseif elementType == "Slider" then
+                            section:CreateSlider(elementConfig)
+                        elseif elementType == "Textbox" then
+                            section:CreateTextbox(elementConfig)
+                        elseif elementType == "Dropdown" then
+                            section:CreateDropdown(elementConfig)
+                        elseif elementType == "Keybind" then
+                            section:CreateKeybind(elementConfig)
+                        elseif elementType == "ColorPicker" then
+                            section:CreateColorPicker(elementConfig)
+                        else
+                            gui:Notify({
+                                Title = "Ошибка",
+                                Content = "Неизвестный тип элемента: " .. tostring(elementType),
+                                Type = "Error",
+                                Duration = 5
+                            })
+                        end
+                    end
+                end
+            end
+            table.insert(windows, window)
+        end
+        return windows
+    end
+
     function gui:ToggleAllWindows()
         for _, window in ipairs(gui.Windows) do
             window:ToggleWindow()
         end
     end
 
-    -- Включение/выключение дебаг-режима
     function gui:SetDebugMode(enabled)
         debugMode = enabled
         logDebug("Дебаг-режим " .. (enabled and "включён" or "выключен"))

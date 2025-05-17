@@ -10,7 +10,7 @@ local HttpService = game:GetService("HttpService")
 local DataStoreService = game:GetService("DataStoreService")
 local CoreGui = game:GetService("CoreGui")
 
--- Динамическое получение LocalPlayer (исправлено для избежания ожидания сигнала, если LocalPlayer уже существует)
+-- Динамическое получение LocalPlayer
 local LocalPlayer
 if Players.LocalPlayer then
     LocalPlayer = Players.LocalPlayer
@@ -73,7 +73,7 @@ function SimpleGUI.new(theme)
 
     -- Создание окна
     function gui:CreateWindow(config)
-        if not config or type(config) ~= "table" then -- Проверка на nil или неверный тип
+        if not config or type(config) ~= "table" then
             gui:Notify({
                 Title = "Ошибка",
                 Content = "Конфигурация окна не предоставлена или неверного типа",
@@ -109,7 +109,7 @@ function SimpleGUI.new(theme)
             Size = UDim2.new(0, width, 0, height),
             BorderSizePixel = 0,
             Visible = visible,
-            ZIndex = 10 -- Явное задание ZIndex
+            ZIndex = 10
         })
 
         createInstance("UICorner", windowFrame, { CornerRadius = UDim.new(0, 8) })
@@ -133,22 +133,24 @@ function SimpleGUI.new(theme)
             connections = {},
             cleanups = {},
             values = {},
-            elementNames = {} -- Для проверки уникальности имён элементов
+            elementNames = {}
         }
 
         -- Таблица для настроек
         local settings = {}
 
-        -- Функция очистки эффектов
+        -- Функция очистки эффектов (добавлена проверка на существование объектов)
         local function cleanupEffects()
             for key, connection in pairs(activeEffects.connections) do
-                if connection then
-                    connection:Disconnect()
+                if connection and typeof(connection) == "RBXScriptConnection" and connection.Connected then
+                    pcall(function()
+                        connection:Disconnect()
+                    end)
                 end
             end
             for key, cleanup in pairs(activeEffects.cleanups) do
-                if cleanup then
-                    cleanup()
+                if cleanup and type(cleanup) == "function" then
+                    pcall(cleanup)
                 end
             end
             activeEffects.connections = {}
@@ -195,7 +197,7 @@ function SimpleGUI.new(theme)
                             break
                         end
                         retryCount = retryCount + 1
-                        wait(5) -- Задержка для соблюдения лимитов
+                        wait(5)
                     end
                     if retryCount >= maxRetries then
                         error("Не удалось сохранить данные после нескольких попыток")
@@ -472,7 +474,7 @@ function SimpleGUI.new(theme)
                 local sectionFrame = createInstance("Frame", tabFrame, {
                     Name = name,
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, -10, 0, 0), -- Динамический размер
+                    Size = UDim2.new(1, -10, 0, 0),
                     Position = UDim2.new(0, 5, 0, #sections * 10),
                     ZIndex = 13
                 })
@@ -491,7 +493,7 @@ function SimpleGUI.new(theme)
                 local elementContainer = createInstance("Frame", sectionFrame, {
                     BackgroundTransparency = 1,
                     Position = UDim2.new(0, 0, 0, 25),
-                    Size = UDim2.new(1, 0, 0, 0), -- Динамический размер
+                    Size = UDim2.new(1, 0, 0, 0),
                     ZIndex = 14
                 })
 
@@ -1066,7 +1068,7 @@ function SimpleGUI.new(theme)
                             local h, s, v = Color3.toHSV(color)
                             color = Color3.fromHSV(hue, s, v)
                             colorBox.BackgroundColor3 = color
-                            hueMarker.Position = UDim2.new(relativeX, -2, 0, 0) -- Исправлена опечатка
+                            hueMarker.Position = UDim2.new(relativeX, -2, 0, 0)
                             label.Text = config.Name .. ": RGB(" .. math.floor(color.R * 255) .. "," .. math.floor(color.G * 255) .. "," .. math.floor(color.B * 255) .. ")"
                             activeEffects.values[uniqueName] = color
                             window:SaveConfiguration()
@@ -1151,7 +1153,7 @@ function SimpleGUI.new(theme)
     -- Продвинутые уведомления
     function gui:Notify(config)
         if not config or not config.Title or not config.Content then
-            return -- Тихий отказ, чтобы не спамить уведомлениями
+            return
         end
 
         local type = config.Type or "Info"

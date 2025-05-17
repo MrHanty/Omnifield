@@ -1,4 +1,4 @@
--- SimpleGUI: Улучшенная библиотека GUI для Roblox, вдохновлённая Rayfield
+-- SimpleGUI: Библиотека GUI для Roblox, вдохновлённая Rayfield
 -- Автор: Grok (xAI)
 -- Лицензия: MIT (открытый исходный код)
 
@@ -10,377 +10,20 @@ local HttpService = game:GetService("HttpService")
 local DataStoreService = game:GetService("DataStoreService")
 local CoreGui = game:GetService("CoreGui")
 
--- Динамическое получение LocalPlayer
+-- Динамическое получение LocalPlayer с тайм-аутом
 local LocalPlayer
 if Players.LocalPlayer then
     LocalPlayer = Players.LocalPlayer
 else
-    Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
-    LocalPlayer = Players.LocalPlayer
-end
-
--- Вспомогательные функции
-local function createInstance(class, parent, props)
-    local instance = Instance.new(class)
-    if parent then
-        instance.Parent = parent
+    local timeout = 5 -- секунд
+    local start = tick()
+    while not Players.LocalPlayer and tick() - start < timeout do
+        Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
     end
-    for prop, value in pairs(props or {}) do
-        instance[prop] = value
-    end
-    return instance
-end
-
-local function tween(instance, props, duration, easingStyle)
-    local tweenInfo = TweenInfo.new(duration, easingStyle or Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    local tween = TweenService:Create(instance, tweenInfo, props)
-    tween:Play()
-    return tween
-end
-
--- Основной объект SimpleGUI
-function SimpleGUI.new(theme)
-    local gui = { Windows = {} }
-    local screenGui = createInstance("ScreenGui", nil, {
-        Name = "SimpleGUI_" .. HttpService:GenerateGUID(false),
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        DisplayOrder = 100
-    })
-
-    -- Защита GUI для эксплойтов
-    local success, err = pcall(function()
-        if syn and syn.protect_gui then
-            syn.protect_gui(screenGui)
-            screenGui.Parent = CoreGui
-        elseif gethui then
-            screenGui.Parent = gethui()
-        else
-            screenGui.Parent = CoreGui
-        end
-    end)
-    if not success then
-        screenGui.Parent = CoreGui
-    end
-
-    theme = theme or {
-        PrimaryColor = Color3.fromRGB(30, 30, 30),
-        SecondaryColor = Color3.fromRGB(50, 50, 50),
-        TextColor = Color3.fromRGB(200, 200, 200),
-        AccentColor = Color3.fromRGB(120, 120, 255),
-        Font = Enum.Font.Gotham,
-        TextSize = 16
-    }
-
-    -- Создание окна
-    function gui:CreateWindow(config)
-        if not config or type(config) ~= "table" then
-            gui:Notify({
-                Title = "Ошибка",
-                Content = "Конфигурация окна не предоставлена или неверного типа",
-                Type = "Error",
-                Duration = 5
-            })
-            return nil
-        end
-
-        local window = {}
-        table.insert(gui.Windows, window)
-        local draggable = config.Draggable ~= false
-        local closable = config.Closable ~= false
-        local visible = config.WindowVisible ~= false
-        local width = config.Width or 600
-        local height = config.Height or 400
-        local showCleanupNotification = config.ShowCleanupNotification ~= false
-        local configurationSaving = config.ConfigurationSaving or { Enabled = false, FolderName = "SimpleGUI", FileName = "Settings" }
-
-        -- Проверка уникальности имени окна
-        local windowName = config.Name or "Window"
-        for _, w in ipairs(gui.Windows) do
-            if w ~= window and w.Name == windowName then
-                windowName = windowName .. "_" .. HttpService:GenerateGUID(false)
-                break
-            end
-        end
-
-        local windowFrame = createInstance("Frame", screenGui, {
-            Name = windowName,
-            BackgroundColor3 = theme.PrimaryColor,
-            Position = UDim2.new(0.5, -width / 2, 0.5, -height / 2),
-            Size = UDim2.new(0, width, 0, height),
-            BorderSizePixel = 0,
-            Visible = visible,
-            ZIndex = 10
-        })
-
-        createInstance("UICorner", windowFrame, { CornerRadius = UDim.new(0, 8) })
-        createInstance("UIGradient", windowFrame, {
-            Color = ColorSequence.new(theme.PrimaryColor, theme.SecondaryColor)
-        })
-
-        -- Обновление позиции при изменении размера экрана
-        screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            local screenSize = screenGui.AbsoluteSize
-            local frameSize = windowFrame.AbsoluteSize
-            local newPos = UDim2.new(
-                0, math.clamp(windowFrame.Position.X.Offset, 0, screenSize.X - frameSize.X),
-                0, math.clamp(windowFrame.Position.Y.Offset, 0, screenSize.Y - frameSize.Y)
-            )
-            windowFrame.Position = newPos
-        end)
-
-        -- Таблица для отслеживания эффектов
-        local activeEffects = {
-            connections = {},
-            cleanups = {},
-            values = {},
-            elementNames = {}
-        }
-
-        -- Таблица для настроек
-        local settings = {}
-
-        -- Функция очистки эффектов (добавлена проверка на существование объектов)
-        local function cleanupEffects()
-            for key, connection in pairs(activeEffects.connections) do
-                if connection and typeof(connection) == "RBXScriptConnection" and connection.Connected then
-                    pcall(function()
-                        connection:Disconnect()
-                    end)
-                end
-            end
-            for key, cleanup in pairs(activeEffects.cleanups) do
-                if cleanup and type(cleanup) == "function" then
-                    pcall(cleanup)
-                end
-            end
-            activeEffects.connections = {}
-            activeEffects.cleanups = {}
-            activeEffects.values = {}
-            activeEffects.elementNames = {}
-            if showCleanupNotification then
-                gui:Notify({
-                    Title = "Очистка",
-                    Content = "Все эффекты сброшены",
-                    Type = "Info",
-                    Duration = 3
-                })
-            end
-        end
-
-        -- Сохранение настроек с учётом ограничений DataStore
-        function window:SaveConfiguration()
-            if not configurationSaving.Enabled then return end
-            local data = {}
-            for key, value in pairs(activeEffects.values) do
-                data[key] = value
-            end
-            local success, err
-            if writefile and readfile then
-                success, err = pcall(function()
-                    local folder = configurationSaving.FolderName or "SimpleGUI"
-                    local file = (configurationSaving.FileName or "Settings") .. ".json"
-                    if not isfolder(folder) then
-                        makefolder(folder)
-                    end
-                    writefile(folder .. "/" .. file, HttpService:JSONEncode(data))
-                end)
-            else
-                success, err = pcall(function()
-                    local dataStore = DataStoreService:GetDataStore("SimpleGUI")
-                    local retryCount = 0
-                    local maxRetries = 3
-                    while retryCount < maxRetries do
-                        local ok, result = pcall(function()
-                            dataStore:SetAsync(configurationSaving.FileName or "Settings", data)
-                        end)
-                        if ok then
-                            break
-                        end
-                        retryCount = retryCount + 1
-                        wait(5)
-                    end
-                    if retryCount >= maxRetries then
-                        error("Не удалось сохранить данные после нескольких попыток")
-                    end
-                end)
-            end
-            if not success then
-                gui:Notify({
-                    Title = "Ошибка",
-                    Content = "Не удалось сохранить настройки: " .. tostring(err),
-                    Type = "Error",
-                    Duration = 5
-                })
-            end
-        end
-
-        -- Загрузка настроек
-        function window:LoadConfiguration()
-            if not configurationSaving.Enabled then return end
-            local success, data
-            if isfile and readfile then
-                success, data = pcall(function()
-                    local folder = configurationSaving.FolderName or "SimpleGUI"
-                    local file = (configurationSaving.FileName or "Settings") .. ".json"
-                    if isfile(folder .. "/" .. file) then
-                        return HttpService:JSONDecode(readfile(folder .. "/" .. file))
-                    end
-                    return {}
-                end)
-            else
-                success, data = pcall(function()
-                    local dataStore = DataStoreService:GetDataStore("SimpleGUI")
-                    return dataStore:GetAsync(configurationSaving.FileName or "Settings") or {}
-                end)
-            end
-            if success then
-                settings = data
-            else
-                gui:Notify({
-                    Title = "Ошибка",
-                    Content = "Не удалось загрузить настройки: " .. tostring(data),
-                    Type = "Error",
-                    Duration = 5
-                })
-            end
-        end
-
-        local topbar = createInstance("Frame", windowFrame, {
-            Name = "Topbar",
-            BackgroundColor3 = theme.SecondaryColor,
-            Size = UDim2.new(1, 0, 0, 30),
-            BorderSizePixel = 0,
-            ZIndex = 11
-        })
-
-        createInstance("UICorner", topbar, { CornerRadius = UDim.new(0, 6) })
-
-        local title = createInstance("TextLabel", topbar, {
-            BackgroundTransparency = 1,
-            Position = UDim2.new(0.05, 0, 0, 0),
-            Size = UDim2.new(0.8, 0, 1, 0),
-            Font = theme.Font,
-            Text = windowName,
-            TextColor3 = theme.TextColor,
-            TextSize = theme.TextSize,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 12
-        })
-
-        -- Кнопка закрытия
-        local closeButton
-        if closable then
-            closeButton = createInstance("TextButton", topbar, {
-                Name = "CloseButton",
-                BackgroundColor3 = theme.SecondaryColor,
-                Position = UDim2.new(1, -25, 0, 5),
-                Size = UDim2.new(0, 20, 0, 20),
-                Font = theme.Font,
-                Text = "X",
-                TextColor3 = theme.TextColor,
-                TextSize = theme.TextSize,
-                ZIndex = 13
-            })
-
-            createInstance("UICorner", closeButton, { CornerRadius = UDim.new(0, 4) })
-
-            closeButton.MouseEnter:Connect(function()
-                tween(closeButton, {BackgroundColor3 = theme.AccentColor}, 0.2)
-            end)
-            closeButton.MouseLeave:Connect(function()
-                tween(closeButton, {BackgroundColor3 = theme.SecondaryColor}, 0.2)
-            end)
-
-            closeButton.MouseButton1Click:Connect(function()
-                window:HideWindow()
-                tween(closeButton, {Size = UDim2.new(0, 18, 0, 18)}, 0.1).Completed:Connect(function()
-                    tween(closeButton, {Size = UDim2.new(0, 20, 0, 20)}, 0.1)
-                end)
-            end)
-        end
-
-        -- Логика перемещения
-        if draggable then
-            local dragging = false
-            local dragStart = nil
-            local startPos = nil
-            local dragConnection
-
-            topbar.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = true
-                    dragStart = input.Position
-                    startPos = windowFrame.Position
-                    if dragConnection then
-                        dragConnection:Disconnect()
-                    end
-                    dragConnection = UserInputService.InputChanged:Connect(function(input)
-                        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                            local delta = input.Position - dragStart
-                            local newPos = UDim2.new(
-                                startPos.X.Scale,
-                                startPos.X.Offset + delta.X,
-                                startPos.Y.Scale,
-                                startPos.Y.Offset + delta.Y
-                            )
-                            local screenSize = screenGui.AbsoluteSize
-                            local frameSize = windowFrame.AbsoluteSize
-                            newPos = UDim2.new(
-                                0, math.clamp(newPos.X.Offset, 0, screenSize.X - frameSize.X),
-                                0, math.clamp(newPos.Y.Offset, 0, screenSize.Y - frameSize.Y)
-                            )
-                            windowFrame.Position = newPos
-                        end
-                    end)
-                    activeEffects.connections["Drag"] = dragConnection
-                end
-            end)
-
-            topbar.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = false
-                    if dragConnection then
-                        dragConnection:Disconnect()
-                        dragConnection = nil
-                        activeEffects.connections["Drag"] = nil
-                    end
-                end
-            end)
-        end
-
-        -- Боковая панель для вкладок
-        local sidebar = createInstance("Frame", windowFrame, {
-            Name = "Sidebar",
-            BackgroundColor3 = theme.SecondaryColor,
-            Position = UDim2.new(0, 0, 0, 30),
-            Size = UDim2.new(0, 100, 1, -30),
-            BorderSizePixel = 0,
-            ZIndex = 11
-        })
-
-        createInstance("UICorner", sidebar, { CornerRadius = UDim.new(0, 6) })
-
-        local tabButtons = createInstance("Frame", sidebar, {
-            Name = "TabButtons",
-            Ba-- SimpleGUI: Библиотека GUI для Roblox, благословлённая Омниссией
--- Автор: Grok (xAI), Дух Машина
--- Лицензия: MIT (открытый исходный код)
-
-local SimpleGUI = {}
-local TweenService = game:GetService("TweenService")
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
-local DataStoreService = game:GetService("DataStoreService")
-local CoreGui = game:GetService("CoreGui")
-
--- Динамическое получение LocalPlayer
-local LocalPlayer
-if Players.LocalPlayer then
     LocalPlayer = Players.LocalPlayer
-else
-    Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
-    LocalPlayer = Players.LocalPlayer
+    if not LocalPlayer then
+        error("Не удалось инициализировать LocalPlayer")
+    end
 end
 
 -- Дебаг-режим
@@ -406,6 +49,7 @@ local function createInstance(class, parent, props)
 end
 
 local function tween(instance, props, duration, easingStyle)
+    if not instance or not instance.Parent then return end
     local tweenInfo = TweenInfo.new(duration, easingStyle or Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     local tween = TweenService:Create(instance, tweenInfo, props)
     tween:Play()
@@ -417,7 +61,7 @@ function SimpleGUI.new(theme, options)
     local gui = { Windows = {} }
     options = options or {}
     debugMode = options.DebugMode or false
-    local scaleFactor = options.UIScale or 1 -- Поддержка масштабирования
+    local scaleFactor = options.UIScale or 1 -- Поддержка масшта  math.clamp(scaleFactor, 0.5, 2) -- Ограничение масштаба
 
     local screenGui = createInstance("ScreenGui", nil, {
         Name = "SimpleGUI_" .. HttpService:GenerateGUID(false),
@@ -432,7 +76,6 @@ function SimpleGUI.new(theme, options)
             { check = function() return gethui end, protect = function() screenGui.Parent = gethui() end },
             { check = function() return Krnl and Krnl.ProtectGui end, protect = function() Krnl.ProtectGui(screenGui); screenGui.Parent = CoreGui end },
             { check = function() return Fluxus and Fluxus.protectGui end, protect = function() Fluxus.protectGui(screenGui); screenGui.Parent = CoreGui end },
-            -- Другие эксплойты можно добавить сюда
         }
         for _, api in ipairs(exploitAPIs) do
             if api.check() then
@@ -458,6 +101,57 @@ function SimpleGUI.new(theme, options)
         TextSize = 16
     }
 
+    -- Уведомления (перемещено перед CreateWindow)
+    function gui:Notify(config)
+        if not config or not config.Title or not config.Content then
+            return
+        end
+
+        local type = config.Type or "Info"
+        local icon = type == "Error" and "❌" or type == "Warning" and "⚠️" or "ℹ️"
+        local notification = createInstance("Frame", screenGui, {
+            Name = "Notification",
+            BackgroundColor3 = theme.PrimaryColor,
+            Size = UDim2.new(0, 200 * scaleFactor, 0, 80 * scaleFactor),
+            Position = UDim2.new(1, -210 * scaleFactor, 1, -90 * scaleFactor),
+            BorderSizePixel = 0,
+            ZIndex = 20
+        })
+
+        createInstance("UICorner", notification, { CornerRadius = UDim.new(0, 6 * scaleFactor) })
+
+        local titleLabel = createInstance("TextLabel", notification, {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, -10 * scaleFactor, 0, 20 * scaleFactor),
+            Position = UDim2.new(0, 5 * scaleFactor, 0, 5 * scaleFactor),
+            Font = theme.Font,
+            Text = icon .. " " .. config.Title,
+            TextColor3 = theme.TextColor,
+            TextSize = theme.TextSize * scaleFactor,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 21
+        })
+
+        local contentLabel = createInstance("TextLabel", notification, {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, -10 * scaleFactor, 0, 50 * scaleFactor),
+            Position = UDim2.new(0, 5 * scaleFactor, 0, 25 * scaleFactor),
+            Font = theme.Font,
+            Text = config.Content,
+            TextColor3 = theme.TextColor,
+            TextSize = theme.TextSize * scaleFactor,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextWrapped = true,
+            ZIndex = 21
+        })
+
+        tween(notification, {Position = UDim2.new(1, -210 * scaleFactor, 1, -100 * scaleFactor)}, 0.3)
+        wait(config.Duration or 5)
+        tween(notification, {Position = UDim2.new(1, 0, 1, -100 * scaleFactor)}, 0.3).Completed:Connect(function()
+            notification:Destroy()
+        end)
+    end
+
     -- Создание окна
     function gui:CreateWindow(config)
         if not config or type(config) ~= "table" then
@@ -480,7 +174,7 @@ function SimpleGUI.new(theme, options)
         local showCleanupNotification = config.ShowCleanupNotification ~= false
         local configurationSaving = config.ConfigurationSaving or { Enabled = false, FolderName = "SimpleGUI", FileName = "Settings" }
 
-        -- Проверка уникальности имени окна
+        -- Проверка уникальности   уникальности имени окна
         local windowName = config.Name or "Window"
         for _, w in ipairs(gui.Windows) do
             if w ~= window and w.Name == windowName then
@@ -506,6 +200,7 @@ function SimpleGUI.new(theme, options)
 
         -- Обновление позиции при изменении размера экрана
         local screenSizeConnection = screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            if not windowFrame or not windowFrame.Parent then return end
             local screenSize = screenGui.AbsoluteSize
             local frameSize = windowFrame.AbsoluteSize
             local newPos = UDim2.new(
@@ -531,9 +226,11 @@ function SimpleGUI.new(theme, options)
         -- Функция очистки эффектов
         local function cleanupEffects()
             for key, connection in pairs(activeEffects.connections) do
-                if connection and typeof(connection) == "RBXScriptConnection" and connection.Connected then
+                if connection and typeof(connection) == "RBXScriptConnection" then
                     pcall(function()
-                        connection:Disconnect()
+                        if connection.Connected then
+                            connection:Disconnect()
+                        end
                         logDebug("Отключено соединение: " .. key)
                     end)
                 end
@@ -561,8 +258,12 @@ function SimpleGUI.new(theme, options)
         end
 
         -- Сохранение настроек с учётом ограничений DataStore
+        local lastSave = 0
+        local saveInterval = 10 -- секунд
         function window:SaveConfiguration()
             if not configurationSaving.Enabled then return end
+            if tick() - lastSave < saveInterval then return end
+            lastSave = tick()
             local data = {}
             for key, value in pairs(activeEffects.values) do
                 data[key] = value
@@ -627,7 +328,7 @@ function SimpleGUI.new(theme, options)
                     return dataStore:GetAsync(configurationSaving.FileName or "Settings") or {}
                 end)
             end
-            if success then
+            if success and type(data) == "table" then
                 settings = data
             else
                 gui:Notify({
@@ -705,7 +406,7 @@ function SimpleGUI.new(theme, options)
             local dragConnection
 
             local dragBegan = topbar.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     dragging = true
                     dragStart = input.Position
                     startPos = windowFrame.Position
@@ -713,7 +414,7 @@ function SimpleGUI.new(theme, options)
                         dragConnection:Disconnect()
                     end
                     dragConnection = UserInputService.InputChanged:Connect(function(input)
-                        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                             local delta = input.Position - dragStart
                             local newPos = UDim2.new(
                                 startPos.X.Scale,
@@ -737,7 +438,7 @@ function SimpleGUI.new(theme, options)
             activeEffects.connections["DragBegan"] = dragBegan
 
             local dragEnded = topbar.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     dragging = false
                     if dragConnection then
                         dragConnection:Disconnect()
@@ -909,6 +610,7 @@ function SimpleGUI.new(theme, options)
 
                 -- Автоматическое обновление размеров
                 local layoutConnection = elementLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                    if not elementContainer or not elementContainer.Parent then return end
                     local contentHeight = elementLayout.AbsoluteContentSize.Y
                     elementContainer.Size = UDim2.new(1, 0, 0, contentHeight)
                     sectionFrame.Size = UDim2.new(1, -10 * scaleFactor, 0, contentHeight + 25 * scaleFactor)
@@ -919,6 +621,12 @@ function SimpleGUI.new(theme, options)
                 -- Проверка уникальности имени элемента
                 local function checkUniqueName(elementName)
                     if activeEffects.elementNames[elementName] then
+                        gui:Notify({
+                            Title = "Предупреждение",
+                            Content = "Элемент с именем '" .. elementName .. "' уже существует. Используется уникальное имя.",
+                            Type = "Warning",
+                            Duration = 5
+                        })
                         return elementName .. "_" .. HttpService:GenerateGUID(false)
                     end
                     activeEffects.elementNames[elementName] = true
@@ -954,12 +662,12 @@ function SimpleGUI.new(theme, options)
                     local buttonClick = button.MouseButton1Click:Connect(function()
                         if config.Callback then
                             local connection, cleanup = config.Callback()
-                            if connection then
+                            if connection and typeof(connection) == "RBXScriptConnection" then
                                 activeEffects.connections[uniqueName .. "_Button"] = connection
                                 logDebug("Создано соединение для кнопки: " .. uniqueName)
                             end
-                            if config.Cleanup then
-                                activeEffects.cleanups[uniqueName .. "_Button"] = config.Cleanup
+                            if cleanup and type(cleanup) == "function" then
+                                activeEffects.cleanups[uniqueName .. "_Button"] = cleanup
                             end
                         end
                     end)
@@ -1026,7 +734,7 @@ function SimpleGUI.new(theme, options)
                     createInstance("UICorner", circle, { CornerRadius = UDim.new(0, 8 * scaleFactor) })
 
                     local toggleClick = toggleFrame.InputBegan:Connect(function(input)
-                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                             state = not state
                             tween(circle, {Position = state and UDim2.new(1, -18 * scaleFactor, 0.5, -8 * scaleFactor) or UDim2.new(0, 2 * scaleFactor, 0.5, -8 * scaleFactor)}, 0.2)
                             tween(toggle, {BackgroundColor3 = state and theme.AccentColor or theme.SecondaryColor}, 0.2)
@@ -1035,12 +743,12 @@ function SimpleGUI.new(theme, options)
                             window:SaveConfiguration()
                             if config.Callback then
                                 local connection, cleanup = config.Callback(state)
-                                if connection then
+                                if connection and typeof(connection) == "RBXScriptConnection" then
                                     activeEffects.connections[uniqueName .. "_Toggle"] = connection
                                     logDebug("Создано соединение для переключателя: " .. uniqueName)
                                 end
-                                if config.Cleanup then
-                                    activeEffects.cleanups[uniqueName .. "_Toggle"] = config.Cleanup
+                                if cleanup and type(cleanup) == "function" then
+                                    activeEffects.cleanups[uniqueName .. "_Toggle"] = cleanup
                                 end
                             end
                         end
@@ -1098,12 +806,12 @@ function SimpleGUI.new(theme, options)
 
                     local dragging = false
                     local beganConnection = sliderBar.InputBegan:Connect(function(input)
-                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                             dragging = true
                         end
                     end)
                     local endedConnection = sliderBar.InputEnded:Connect(function(input)
-                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                             dragging = false
                         end
                     end)
@@ -1112,7 +820,7 @@ function SimpleGUI.new(theme, options)
                     logDebug("Создано соединение для слайдера: " .. uniqueName)
 
                     local changedConnection = UserInputService.InputChanged:Connect(function(input)
-                        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                             local relativeX = (input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X
                             relativeX = math.clamp(relativeX, 0, 1)
                             value = math.floor(config.Min + (config.Max - config.Min) * relativeX)
@@ -1122,12 +830,12 @@ function SimpleGUI.new(theme, options)
                             window:SaveConfiguration()
                             if config.Callback then
                                 local connection, cleanup = config.Callback(value)
-                                if connection then
+                                if connection and typeof(connection) == "RBXScriptConnection" then
                                     activeEffects.connections[uniqueName .. "_SliderCallback"] = connection
                                     logDebug("Создано соединение для слайдера (Callback): " .. uniqueName)
                                 end
-                                if config.Cleanup then
-                                    activeEffects.cleanups[uniqueName .. "_SliderCallback"] = config.Cleanup
+                                if cleanup and type(cleanup) == "function" then
+                                    activeEffects.cleanups[uniqueName .. "_SliderCallback"] = cleanup
                                 end
                             end
                         end
@@ -1168,12 +876,12 @@ function SimpleGUI.new(theme, options)
                         window:SaveConfiguration()
                         if config.Callback then
                             local connection, cleanup = config.Callback(value)
-                            if connection then
+                            if connection and typeof(connection) == "RBXScriptConnection" then
                                 activeEffects.connections[uniqueName .. "_Textbox"] = connection
                                 logDebug("Создано соединение для текстового поля: " .. uniqueName)
                             end
-                            if config.Cleanup then
-                                activeEffects.cleanups[uniqueName .. "_Textbox"] = config.Cleanup
+                            if cleanup and type(cleanup) == "function" then
+                                activeEffects.cleanups[uniqueName .. "_Textbox"] = cleanup
                             end
                         end
                     end)
@@ -1267,12 +975,12 @@ function SimpleGUI.new(theme, options)
                             window:SaveConfiguration()
                             if config.Callback then
                                 local connection, cleanup = config.Callback(selected)
-                                if connection then
+                                if connection and typeof(connection) == "RBXScriptConnection" then
                                     activeEffects.connections[uniqueName .. "_Dropdown"] = connection
                                     logDebug("Создано соединение для выпадающего списка: " .. uniqueName)
                                 end
-                                if config.Cleanup then
-                                    activeEffects.cleanups[uniqueName .. "_Dropdown"] = config.Cleanup
+                                if cleanup and type(cleanup) == "function" then
+                                    activeEffects.cleanups[uniqueName .. "_Dropdown"] = cleanup
                                 end
                             end
                         end)
@@ -1336,7 +1044,7 @@ function SimpleGUI.new(theme, options)
                     createInstance("UICorner", bindButton, { CornerRadius = UDim.new(0, 4 * scaleFactor) })
 
                     local binding = false
-                    local isProcessing = false -- Защита от race conditions
+                    local isProcessing = false
                     local bindConnection = bindButton.MouseButton1Click:Connect(function()
                         if not isProcessing then
                             binding = true
@@ -1346,7 +1054,6 @@ function SimpleGUI.new(theme, options)
                     activeEffects.connections[uniqueName .. "_KeybindBind"] = bindConnection
                     logDebug("Создано соединение для кнопки привязки: " .. uniqueName)
 
-                    -- Удаление старого соединения перед созданием нового
                     if activeEffects.connections[uniqueName .. "_KeybindBinding"] then
                         activeEffects.connections[uniqueName .. "_KeybindBinding"]:Disconnect()
                         activeEffects.connections[uniqueName .. "_KeybindBinding"] = nil
@@ -1371,12 +1078,12 @@ function SimpleGUI.new(theme, options)
                                     logDebug("Отключено старое соединение Callback: " .. uniqueName)
                                 end
                                 local cbConnection, cleanup = config.Callback(key)
-                                if cbConnection then
+                                if cbConnection and typeof(cbConnection) == "RBXScriptConnection" then
                                     activeEffects.connections[uniqueName .. "_Keybind"] = cbConnection
                                     logDebug("Создано соединение Callback для привязки: " .. uniqueName)
                                 end
-                                if config.Cleanup then
-                                    activeEffects.cleanups[uniqueName .. "_Keybind"] = config.Cleanup
+                                if cleanup and type(cleanup) == "function" then
+                                    activeEffects.cleanups[uniqueName .. "_Keybind"] = cleanup
                                 end
                             end
                             isProcessing = false
@@ -1466,7 +1173,7 @@ function SimpleGUI.new(theme, options)
                     local isOpen = false
                     local dragging = false
                     local openConnection = colorBox.InputBegan:Connect(function(input)
-                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                             isOpen = not isOpen
                             pickerFrame.Visible = isOpen
                             tween(pickerFrame, {Size = UDim2.new(1, 0, 0, isOpen and 20 * scaleFactor or 0)}, 0.2)
@@ -1476,12 +1183,12 @@ function SimpleGUI.new(theme, options)
                     logDebug("Создано соединение для открытия ColorPicker: " .. uniqueName)
 
                     local beganConnection = hueBar.InputBegan:Connect(function(input)
-                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                             dragging = true
                         end
                     end)
                     local endedConnection = hueBar.InputEnded:Connect(function(input)
-                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                             dragging = false
                         end
                     end)
@@ -1489,7 +1196,6 @@ function SimpleGUI.new(theme, options)
                     activeEffects.connections[uniqueName .. "_ColorPickerEnded"] = endedConnection
                     logDebug("Создано соединение для ColorPicker (Input): " .. uniqueName)
 
-                    -- Агрессивная очистка старых соединений
                     if activeEffects.connections[uniqueName .. "_ColorPickerChanged"] then
                         activeEffects.connections[uniqueName .. "_ColorPickerChanged"]:Disconnect()
                         activeEffects.connections[uniqueName .. "_ColorPickerChanged"] = nil
@@ -1497,7 +1203,7 @@ function SimpleGUI.new(theme, options)
                     end
 
                     local changedConnection = UserInputService.InputChanged:Connect(function(input)
-                        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                             local relativeX = (input.Position.X - hueBar.AbsolutePosition.X) / hueBar.AbsoluteSize.X
                             relativeX = math.clamp(relativeX, 0, 1)
                             local hue = relativeX
@@ -1510,12 +1216,12 @@ function SimpleGUI.new(theme, options)
                             window:SaveConfiguration()
                             if config.Callback then
                                 local connection, cleanup = config.Callback(color)
-                                if connection then
+                                if connection and typeof(connection) == "RBXScriptConnection" then
                                     activeEffects.connections[uniqueName .. "_ColorPickerCallback"] = connection
                                     logDebug("Создано соединение для ColorPicker (Callback): " .. uniqueName)
                                 end
-                                if config.Cleanup then
-                                    activeEffects.cleanups[uniqueName .. "_ColorPickerCallback"] = config.Cleanup
+                                if cleanup and type(cleanup) == "function" then
+                                    activeEffects.cleanups[uniqueName .. "_ColorPickerCallback"] = cleanup
                                 end
                             end
                         end
@@ -1533,6 +1239,15 @@ function SimpleGUI.new(theme, options)
 
         -- Показать окно
         function window:ShowWindow()
+            if not windowFrame or not windowFrame.Parent then
+                gui:Notify({
+                    Title = "Ошибка",
+                    Content = "Окно было уничтожено",
+                    Type = "Error",
+                    Duration = 5
+                })
+                return
+            end
             if not windowFrame.Visible then
                 windowFrame.Visible = true
                 windowFrame.Size = UDim2.new(0, width * 0.9, 0, height * 0.9)
@@ -1542,17 +1257,37 @@ function SimpleGUI.new(theme, options)
 
         -- Скрыть окно
         function window:HideWindow()
+            if not windowFrame or not windowFrame.Parent then
+                gui:Notify({
+                    Title = "Ошибка",
+                    Content = "Окно было уничтожено",
+                    Type = "Error",
+                    Duration = 5
+                })
+                return
+            end
             if windowFrame.Visible then
                 cleanupEffects()
                 tween(windowFrame, {Size = UDim2.new(0, width * 0.9, 0, height * 0.9), Transparency = 0.8}, 0.3).Completed:Connect(function()
-                    windowFrame.Visible = false
-                    windowFrame.Transparency = 0
+                    if windowFrame and windowFrame.Parent then
+                        windowFrame.Visible = false
+                        windowFrame.Transparency = 0
+                    end
                 end)
             end
         end
 
         -- Переключить видимость окна
         function window:ToggleWindow()
+            if not windowFrame or not windowFrame.Parent then
+                gui:Notify({
+                    Title = "Ошибка",
+                    Content = "Окно было уничтожено",
+                    Type = "Error",
+                    Duration = 5
+                })
+                return
+            end
             if windowFrame.Visible then
                 window:HideWindow()
             else
@@ -1569,8 +1304,11 @@ function SimpleGUI.new(theme, options)
                     break
                 end
             end
-            windowFrame:Destroy()
-            logDebug("Окно уничтожено: " .. windowName)
+            if windowFrame then
+                windowFrame:Destroy()
+                windowFrame = nil
+                logDebug("Окно уничтожено: " .. windowName)
+            end
         end
 
         window.Visible = windowFrame.Visible
@@ -1587,57 +1325,6 @@ function SimpleGUI.new(theme, options)
         logDebug("Создано соединение для PlayerAdded: " .. windowName)
 
         return window
-    end
-
-    -- Продвинутые уведомления
-    function gui:Notify(config)
-        if not config or not config.Title or not config.Content then
-            return
-        end
-
-        local type = config.Type or "Info"
-        local icon = type == "Error" and "❌" or type == "Warning" and "⚠️" or "ℹ️"
-        local notification = createInstance("Frame", screenGui, {
-            Name = "Notification",
-            BackgroundColor3 = theme.PrimaryColor,
-            Size = UDim2.new(0, 200 * scaleFactor, 0, 80 * scaleFactor),
-            Position = UDim2.new(1, -210 * scaleFactor, 1, -90 * scaleFactor),
-            BorderSizePixel = 0,
-            ZIndex = 20
-        })
-
-        createInstance("UICorner", notification, { CornerRadius = UDim.new(0, 6 * scaleFactor) })
-
-        local titleLabel = createInstance("TextLabel", notification, {
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, -10 * scaleFactor, 0, 20 * scaleFactor),
-            Position = UDim2.new(0, 5 * scaleFactor, 0, 5 * scaleFactor),
-            Font = theme.Font,
-            Text = icon .. " " .. config.Title,
-            TextColor3 = theme.TextColor,
-            TextSize = theme.TextSize * scaleFactor,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 21
-        })
-
-        local contentLabel = createInstance("TextLabel", notification, {
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, -10 * scaleFactor, 0, 50 * scaleFactor),
-            Position = UDim2.new(0, 5 * scaleFactor, 0, 25 * scaleFactor),
-            Font = theme.Font,
-            Text = config.Content,
-            TextColor3 = theme.TextColor,
-            TextSize = theme.TextSize * scaleFactor,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextWrapped = true,
-            ZIndex = 21
-        })
-
-        tween(notification, {Position = UDim2.new(1, -210 * scaleFactor, 1, -100 * scaleFactor)}, 0.3)
-        wait(config.Duration or 5)
-        tween(notification, {Position = UDim2.new(1, 0, 1, -100 * scaleFactor)}, 0.3).Completed:Connect(function()
-            notification:Destroy()
-        end)
     end
 
     -- Переключение всех окон
@@ -1657,5 +1344,4 @@ function SimpleGUI.new(theme, options)
 end
 
 return SimpleGUI
-
 --嫌いなものがある場合は、それを教えてください。

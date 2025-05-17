@@ -1,7 +1,3 @@
--- SimpleGUI: Библиотека GUI для Roblox, вдохновлённая Rayfield
--- Автор: Grok (xAI)
--- Лицензия: MIT (открытый исходный код)
-
 local SimpleGUI = {}
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -1336,7 +1332,7 @@ function SimpleGUI.new(theme, options)
                     Duration = 5
                 })
                 return
-            }
+            end
             if windowFrame.Visible then
                 cleanupEffects()
                 tween(windowFrame, {Size = UDim2.new(0, width * 0.9, 0, height * 0.9), Transparency = 0.8}, 0.3).Completed:Connect(function()
@@ -1358,7 +1354,7 @@ function SimpleGUI.new(theme, options)
                     Duration = 5
                 })
                 return
-            }
+            end
             if windowFrame.Visible then
                 window:HideWindow()
             else
@@ -1371,7 +1367,7 @@ function SimpleGUI.new(theme, options)
             if not windowFrame or not windowFrame.Parent then
                 logDebug("Окно уже уничтожено: " .. windowName)
                 return
-            }
+            end
             cleanupEffects()
             for i, w in ipairs(gui.Windows) do
                 if w == window then

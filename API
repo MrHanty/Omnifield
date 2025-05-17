@@ -32,7 +32,7 @@ local debugConnections = {} -- Отслеживание всех соедине�
 
 local function logDebug(message)
     if debugMode then
-        print("[SimpleGUI Debug] " .. tostring(message))
+        -- Логирование отключено по запросу пользователя
     end
 end
 
@@ -61,16 +61,34 @@ function SimpleGUI.new(theme, options)
     local gui = { Windows = {} }
     options = options or {}
     debugMode = options.DebugMode or false
+
+    -- Проверка и установка scaleFactor
     local scaleFactor = options.UIScale or 1
+    if type(scaleFactor) ~= "number" or scaleFactor <= 0 then
+        scaleFactor = 1
+        gui:Notify({
+            Title = "Предупреждение",
+            Content = "UIScale должен быть числом больше 0. Установлено значение по умолчанию: 1",
+            Type = "Warning",
+            Duration = 5
+        })
+    end
     scaleFactor = math.clamp(scaleFactor, 0.5, 2) -- Ограничение масштаба
+
+    -- Проверка контекста выполнения
+    if not game:GetService("RunService"):IsClient() then
+        error("SimpleGUI должен выполняться на клиенте (LocalScript)")
+    end
 
     local screenGui = createInstance("ScreenGui", nil, {
         Name = "SimpleGUI_" .. HttpService:GenerateGUID(false),
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        DisplayOrder = 100
+        DisplayOrder = 100,
+        ResetOnSpawn = false
     })
 
     -- Универсальная защита GUI для всех эксплойтов
+    local guiContainer
     local success, err = pcall(function()
         local exploitAPIs = {
             { check = function() return syn and syn.protect_gui end, protect = function() syn.protect_gui(screenGui); screenGui.Parent = CoreGui end },
@@ -88,10 +106,29 @@ function SimpleGUI.new(theme, options)
         screenGui.Parent = CoreGui
         logDebug("GUI размещена в CoreGui (без защиты)")
     end)
-    if not success then
-        screenGui.Parent = CoreGui
-        logDebug("Ошибка защиты GUI: " .. tostring(err))
+
+    if not success or not screenGui.Parent then
+        screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") -- Альтернатива CoreGui
+        gui:Notify({
+            Title = "Предупреждение",
+            Content = "Не удалось поместить GUI в CoreGui: " .. tostring(err) .. ". Используется PlayerGui.",
+            Type = "Warning",
+            Duration = 5
+        })
     end
+
+    -- Подтверждение успешного размещения
+    if not screenGui.Parent then
+        error("Не удалось установить Parent для ScreenGui")
+    end
+
+    guiContainer = screenGui.Parent
+    gui:Notify({
+        Title = "Информация",
+        Content = "ScreenGui размещён в " .. tostring(guiContainer.Name),
+        Type = "Info",
+        Duration = 5
+    })
 
     -- Базовый ZIndex для всех элементов
     local baseZIndex = 10
@@ -222,12 +259,10 @@ function SimpleGUI.new(theme, options)
         -- Функция очистки эффектов
         local function cleanupEffects()
             for key, connection in pairs(activeEffects.connections) do
-                if connection and typeof(connection) == "RBXScriptConnection" then
+                if connection and typeof(connection) == "RBXScriptConnection" and connection.Connected then
                     pcall(function()
-                        if connection.Connected then
-                            connection:Disconnect()
-                            logDebug("Отключено соединение: " .. key)
-                        end
+                        connection:Disconnect()
+                        logDebug("Отключено соединение: " .. key)
                     end)
                 end
                 activeEffects.connections[key] = nil
@@ -259,6 +294,7 @@ function SimpleGUI.new(theme, options)
         function window:SaveConfiguration()
             if not configurationSaving.Enabled then return end
             if tick() - lastSave < saveInterval then return end
+            if not next(activeEffects.values) then return end -- Проверка на пустую таблицу
             lastSave = tick()
             local data = {}
             for key, value in pairs(activeEffects.values) do
@@ -1057,6 +1093,17 @@ function SimpleGUI.new(theme, options)
 
                     local binding = false
                     local isProcessing = false
+
+                    -- Отключение старых соединений
+                    if activeEffects.connections[uniqueName .. "_KeybindBind"] then
+                        activeEffects.connections[uniqueName .. "_KeybindBind"]:Disconnect()
+                        activeEffects.connections[uniqueName .. "_KeybindBind"] = nil
+                    end
+                    if activeEffects.connections[uniqueName .. "_KeybindBinding"] then
+                        activeEffects.connections[uniqueName .. "_KeybindBinding"]:Disconnect()
+                        activeEffects.connections[uniqueName .. "_KeybindBinding"] = nil
+                    end
+
                     local bindConnection = bindButton.MouseButton1Click:Connect(function()
                         if not isProcessing then
                             binding = true
@@ -1065,12 +1112,6 @@ function SimpleGUI.new(theme, options)
                     end)
                     activeEffects.connections[uniqueName .. "_KeybindBind"] = bindConnection
                     logDebug("Создано соединение для кнопки привязки: " .. uniqueName)
-
-                    if activeEffects.connections[uniqueName .. "_KeybindBinding"] then
-                        activeEffects.connections[uniqueName .. "_KeybindBinding"]:Disconnect()
-                        activeEffects.connections[uniqueName .. "_KeybindBinding"] = nil
-                        logDebug("Отключено старое соединение привязки: " .. uniqueName)
-                    end
 
                     local connection = UserInputService.InputBegan:Connect(function(input)
                         if binding and input.UserInputType == Enum.UserInputType.Keyboard and not isProcessing then
@@ -1118,6 +1159,7 @@ function SimpleGUI.new(theme, options)
 
                     local uniqueName = checkUniqueName(config.Name)
                     local color = activeEffects.values[uniqueName] or config.Default or Color3.fromRGB(255, 255, 255)
+                    local h, s, v = Color3.toHSV(color) -- Сохраняем начальные значения насыщенности и яркости
                     local colorPickerFrame = createInstance("Frame", elementContainer, {
                         Name = uniqueName,
                         BackgroundTransparency = 1,
@@ -1178,12 +1220,31 @@ function SimpleGUI.new(theme, options)
                     local hueMarker = createInstance("Frame", hueBar, {
                         BackgroundColor3 = theme.TextColor,
                         Size = UDim2.new(0, 4 * scaleFactor, 1, 0),
-                        Position = UDim2.new(0, 0, 0, 0),
+                        Position = UDim2.new(h, -2 * scaleFactor, 0, 0),
                         ZIndex = baseZIndex + 52
                     })
 
                     local isOpen = false
                     local dragging = false
+
+                    -- Отключение старых соединений
+                    if activeEffects.connections[uniqueName .. "_ColorPickerOpen"] then
+                        activeEffects.connections[uniqueName .. "_ColorPickerOpen"]:Disconnect()
+                        activeEffects.connections[uniqueName .. "_ColorPickerOpen"] = nil
+                    end
+                    if activeEffects.connections[uniqueName .. "_ColorPickerBegan"] then
+                        activeEffects.connections[uniqueName .. "_ColorPickerBegan"]:Disconnect()
+                        activeEffects.connections[uniqueName .. "_ColorPickerBegan"] = nil
+                    end
+                    if activeEffects.connections[uniqueName .. "_ColorPickerEnded"] then
+                        activeEffects.connections[uniqueName .. "_ColorPickerEnded"]:Disconnect()
+                        activeEffects.connections[uniqueName .. "_ColorPickerEnded"] = nil
+                    end
+                    if activeEffects.connections[uniqueName .. "_ColorPickerChanged"] then
+                        activeEffects.connections[uniqueName .. "_ColorPickerChanged"]:Disconnect()
+                        activeEffects.connections[uniqueName .. "_ColorPickerChanged"] = nil
+                    end
+
                     local openConnection = colorBox.InputBegan:Connect(function(input)
                         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                             isOpen = not isOpen
@@ -1209,27 +1270,22 @@ function SimpleGUI.new(theme, options)
                     activeEffects.connections[uniqueName .. "_ColorPickerEnded"] = endedConnection
                     logDebug("Создано соединение для ColorPicker (Input): " .. uniqueName)
 
-                    if activeEffects.connections[uniqueName .. "_ColorPickerChanged"] then
-                        pcall(function()
-                            activeEffects.connections[uniqueName .. "_ColorPickerChanged"]:Disconnect()
-                            logDebug("Отключено старое соединение ColorPicker: " .. uniqueName)
-                        end)
-                        activeEffects.connections[uniqueName .. "_ColorPickerChanged"] = nil
-                    end
-
                     local changedConnection = UserInputService.InputChanged:Connect(function(input)
                         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                             local relativeX = (input.Position.X - hueBar.AbsolutePosition.X) / hueBar.AbsoluteSize.X
                             relativeX = math.clamp(relativeX, 0, 1)
-                            local hue = relativeX
-                            local h, s, v = Color3.toHSV(color)
-                            color = Color3.fromHSV(hue, s, v)
+                            h = relativeX -- Обновляем только hue
+                            color = Color3.fromHSV(h, s, v) -- Используем сохранённые s и v
                             colorBox.BackgroundColor3 = color
                             hueMarker.Position = UDim2.new(relativeX, -2 * scaleFactor, 0, 0)
                             label.Text = config.Name .. ": RGB(" .. math.floor(color.R * 255) .. "," .. math.floor(color.G * 255) .. "," .. math.floor(color.B * 255) .. ")"
                             activeEffects.values[uniqueName] = color
                             window:SaveConfiguration()
                             if config.Callback then
+                                if activeEffects.connections[uniqueName .. "_ColorPickerCallback"] then
+                                    activeEffects.connections[uniqueName .. "_ColorPickerCallback"]:Disconnect()
+                                    logDebug("Отключено старое соединение ColorPicker Callback: " .. uniqueName)
+                                end
                                 local connection, cleanup = config.Callback(color)
                                 if connection and typeof(connection) == "RBXScriptConnection" then
                                     activeEffects.connections[uniqueName .. "_ColorPickerCallback"] = connection
@@ -1280,7 +1336,7 @@ function SimpleGUI.new(theme, options)
                     Duration = 5
                 })
                 return
-            end
+            }
             if windowFrame.Visible then
                 cleanupEffects()
                 tween(windowFrame, {Size = UDim2.new(0, width * 0.9, 0, height * 0.9), Transparency = 0.8}, 0.3).Completed:Connect(function()
@@ -1302,7 +1358,7 @@ function SimpleGUI.new(theme, options)
                     Duration = 5
                 })
                 return
-            end
+            }
             if windowFrame.Visible then
                 window:HideWindow()
             else
@@ -1315,7 +1371,7 @@ function SimpleGUI.new(theme, options)
             if not windowFrame or not windowFrame.Parent then
                 logDebug("Окно уже уничтожено: " .. windowName)
                 return
-            end
+            }
             cleanupEffects()
             for i, w in ipairs(gui.Windows) do
                 if w == window then
@@ -1341,6 +1397,9 @@ function SimpleGUI.new(theme, options)
         activeEffects.connections["PlayerAdded"] = playerAddedConnection
         logDebug("Создано соединение для PlayerAdded: " .. windowName)
 
+        -- Вызов ShowWindow при создании
+        window:ShowWindow()
+
         return window
     end
 
@@ -1361,4 +1420,3 @@ function SimpleGUI.new(theme, options)
 end
 
 return SimpleGUI
---嫌いなものがある場合は、それを教えてください。

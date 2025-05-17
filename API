@@ -1,6 +1,5 @@
 -- SimpleGUI: Библиотека GUI для Roblox
--- Автор: Grok (xAI)
--- Лицензия: MIT (открытый исходный код)
+
 
 local SimpleGUI = {}
 local TweenService = game:GetService("TweenService")
@@ -48,14 +47,15 @@ function SimpleGUI.new(theme)
         config = config or {}
         local draggable = config.Draggable ~= false -- По умолчанию true
         local closable = config.Closable ~= false -- По умолчанию true
-        local closeAction = config.CloseAction or "Destroy" -- "Destroy" или "Hide"
+        local visible = config.WindowVisible ~= false -- По умолчанию true
 
         local windowFrame = createInstance("Frame", screenGui, {
             Name = config.Name or "Window",
             BackgroundColor3 = theme.PrimaryColor,
             Position = UDim2.new(0.5, -150, 0.5, -100),
             Size = UDim2.new(0, 300, 0, 400),
-            BorderSizePixel = 0
+            BorderSizePixel = 0,
+            Visible = visible
         })
 
         local topbar = createInstance("Frame", windowFrame, {
@@ -68,7 +68,7 @@ function SimpleGUI.new(theme)
         local title = createInstance("TextLabel", topbar, {
             BackgroundTransparency = 1,
             Position = UDim2.new(0.05, 0, 0, 0),
-            Size = UDim2.new(0.7, 0, 1, 0),
+            Size = UDim2.new(0.4, 0, 1, 0),
             Font = Enum.Font.SourceSansBold,
             Text = config.Name or "SimpleGUI",
             TextColor3 = theme.TextColor,
@@ -81,23 +81,29 @@ function SimpleGUI.new(theme)
         if closable then
             closeButton = createInstance("TextButton", topbar, {
                 Name = "CloseButton",
-                BackgroundTransparency = 1,
-                Position = UDim2.new(0.95, -15, 0, 5),
+                BackgroundColor3 = theme.SecondaryColor,
+                Position = UDim2.new(1, -25, 0, 5),
                 Size = UDim2.new(0, 20, 0, 20),
                 Font = Enum.Font.SourceSansBold,
                 Text = "X",
                 TextColor3 = theme.TextColor,
-                TextScaled = true
+                TextScaled = true,
+                ZIndex = 2
             })
 
+            -- Анимация при наведении
+            closeButton.MouseEnter:Connect(function()
+                tween(closeButton, {BackgroundColor3 = theme.AccentColor}, 0.2)
+            end)
+            closeButton.MouseLeave:Connect(function()
+                tween(closeButton, {BackgroundColor3 = theme.SecondaryColor}, 0.2)
+            end)
+
+            -- Закрытие (скрытие окна)
             closeButton.MouseButton1Click:Connect(function()
-                if closeAction == "Hide" then
-                    windowFrame.Visible = false
-                else
-                    screenGui:Destroy()
-                end
-                tween(closeButton, {TextColor3 = theme.AccentColor}, 0.1).Completed:Connect(function()
-                    tween(closeButton, {TextColor3 = theme.TextColor}, 0.1)
+                windowFrame.Visible = false
+                tween(closeButton, {Size = UDim2.new(0, 18, 0, 18)}, 0.1).Completed:Connect(function()
+                    tween(closeButton, {Size = UDim2.new(0, 20, 0, 20)}, 0.1)
                 end)
             end)
         end
@@ -153,13 +159,13 @@ function SimpleGUI.new(theme)
         local tabButtons = createInstance("Frame", topbar, {
             Name = "TabButtons",
             BackgroundTransparency = 1,
-            Position = UDim2.new(0.3, 0, 0, 0),
-            Size = UDim2.new(closable and 0.65 or 0.7, 0, 1, 0)
+            Position = UDim2.new(0.45, 0, 0, 0),
+            Size = UDim2.new(0.5, 0, 1, 0)
         })
 
         local tabButtonLayout = createInstance("UIListLayout", tabButtons, {
             FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalAlignment = Enum.HorizontalAlignment.Right,
+            HorizontalAlignment = Enum.HorizontalAlignment.Left,
             SortOrder = Enum.SortOrder.LayoutOrder,
             Padding = UDim.new(0, 5)
         })
@@ -231,11 +237,8 @@ function SimpleGUI.new(theme)
 
                 local elementContainer = createInstance("Frame", sectionFrame, {
                     BackgroundTransparency = 1,
-                    Position = UDim2.new(0,RobotoStudio, {
-                        BackgroundTransparency = 1,
-                        Position = UDim2.new(0, 5, 0, 25),
-                        Size = UDim2.new(1, -10, 1, -25)
-                    })
+                    Position = UDim2.new(0, 0, 0, 25),
+                    Size = UDim2.new(1, 0, 1, -25)
                 })
 
                 local elementLayout = createInstance("UIListLayout", elementContainer, {
@@ -347,6 +350,33 @@ function SimpleGUI.new(theme)
             return tab
         end
 
+        -- Показать окно
+        function window:ShowWindow()
+            if not windowFrame.Visible then
+                windowFrame.Visible = true
+                tween(windowFrame, {Transparency = 0}, 0.3)
+            end
+        end
+
+        -- Скрыть окно
+        function window:HideWindow()
+            if windowFrame.Visible then
+                tween(windowFrame, {Transparency = 0.8}, 0.3).Completed:Connect(function()
+                    windowFrame.Visible = false
+                    windowFrame.Transparency = 0
+                end)
+            end
+        end
+
+        -- Переключить видимость окна
+        function window:ToggleWindow()
+            if windowFrame.Visible then
+                window:HideWindow()
+            else
+                window:ShowWindow()
+            end
+        end
+
         return window
     end
 
@@ -408,7 +438,7 @@ local Window = GUI:CreateWindow({
     Name = "Мой Эксплойт",
     Draggable = true,
     Closable = true,
-    CloseAction = "Hide"
+    WindowVisible = true
 })
 local MainTab = Window:CreateTab("Основное")
 local PlayerSection = MainTab:CreateSection("Управление игроком")
@@ -462,4 +492,10 @@ PlayerSection:CreateTextbox({
 })
 
 GUI:Notify("GUI загружен", "Добро пожаловать в SimpleGUI!", 5)
+
+-- Пример переключения видимости
+wait(10)
+Window:ToggleWindow()
+wait(2)
+Window:ToggleWindow()
 --]]
